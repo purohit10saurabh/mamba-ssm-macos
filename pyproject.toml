@@ -17,7 +17,7 @@ classifiers = [
 ]
 dependencies = [
     "torch",
-    "triton",
+    "triton; platform_system!='Darwin' or platform_machine!='arm64'",
     "ninja",
     "einops",
     "transformers",

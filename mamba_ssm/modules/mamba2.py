@@ -5,7 +5,6 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from einops import rearrange, repeat
 
 try:
@@ -19,19 +18,51 @@ except ImportError:
     causal_conv1d_varlen_states = None
 
 try:
-    from mamba_ssm.ops.triton.selective_state_update import selective_state_update
+    from mamba_ssm.ops.triton.selective_state_update import \
+        selective_state_update
 except ImportError:
     selective_state_update = None
 
-from mamba_ssm.ops.triton.layernorm_gated import RMSNorm as RMSNormGated
-
-from mamba_ssm.distributed.tensor_parallel import ColumnParallelLinear, RowParallelLinear
-from mamba_ssm.distributed.distributed_utils import all_reduce, reduce_scatter
-
-from mamba_ssm.ops.triton.ssd_combined import mamba_chunk_scan_combined
-from mamba_ssm.ops.triton.ssd_combined import mamba_split_conv1d_scan_combined
+try:
+    from mamba_ssm.ops.triton.layernorm_gated import RMSNorm as RMSNormGated
+    has_triton_layernorm = True
+except ImportError:
+    has_triton_layernorm = False
+    # Simple fallback for RMSNorm implementation
+    class RMSNormGated(nn.Module):
+        def __init__(self, hidden_size, eps=1e-5, group_size=None, norm_before_gate=True, device=None, dtype=None):
+            factory_kwargs = {'device': device, 'dtype': dtype}
+            super().__init__()
+            self.eps = eps
+            self.group_size = group_size
+            self.norm_before_gate = norm_before_gate
+            self.weight = nn.Parameter(torch.empty(hidden_size, **factory_kwargs))
+            self.bias = nn.Parameter(torch.empty(hidden_size, **factory_kwargs))
+            self.reset_parameters()
+            
+        def reset_parameters(self):
+            nn.init.ones_(self.weight)
+            nn.init.zeros_(self.bias)
+            
+        def forward(self, x, z=None):
+            # Simple RMSNorm implementation
+            input_dtype = x.dtype
+            x = x.float()
+            if z is not None and not self.norm_before_gate:
+                x = x * F.silu(z)
+            rstd = 1 / torch.sqrt((x.square()).mean(dim=-1, keepdim=True) + self.eps)
+            out = (x * rstd * self.weight) + self.bias
+            if z is not None and self.norm_before_gate:
+                out = out * F.silu(z)
+            return out.to(input_dtype)
 
 from huggingface_hub import PyTorchModelHubMixin
+
+from mamba_ssm.distributed.distributed_utils import all_reduce, reduce_scatter
+from mamba_ssm.distributed.tensor_parallel import (ColumnParallelLinear,
+                                                   RowParallelLinear)
+from mamba_ssm.ops.triton.ssd_combined import (
+    mamba_chunk_scan_combined, mamba_split_conv1d_scan_combined)
 
 
 class Mamba2(nn.Module, PyTorchModelHubMixin):
@@ -140,7 +171,6 @@ class Mamba2(nn.Module, PyTorchModelHubMixin):
         self.D._no_weight_decay = True
 
         if self.rmsnorm:
-            assert RMSNormGated is not None
             self.norm = RMSNormGated(self.d_ssm, eps=1e-5, norm_before_gate=self.norm_before_gate,
                                      group_size=self.d_ssm // ngroups, **factory_kwargs)
 

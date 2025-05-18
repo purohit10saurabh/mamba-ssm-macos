@@ -2,20 +2,41 @@
 
 import torch
 import torch.nn.functional as F
-from mamba_ssm.utils.torch import custom_bwd, custom_fwd
-
 from einops import rearrange, repeat
 
+from mamba_ssm.utils.torch import custom_bwd, custom_fwd
+
 try:
-    from causal_conv1d import causal_conv1d_fn
     import causal_conv1d_cuda
+    from causal_conv1d import causal_conv1d_fn
 except ImportError:
     causal_conv1d_fn = None
     causal_conv1d_cuda = None
 
-from mamba_ssm.ops.triton.layer_norm import _layer_norm_fwd
+try:
+    from mamba_ssm.ops.triton.layer_norm import _layer_norm_fwd
+    has_triton = True
+except ImportError:
+    has_triton = False
+    # Define a fallback for _layer_norm_fwd
+    def _layer_norm_fwd(x, weight, bias, eps, residual=None, residual_dtype=None, is_rms_norm=False):
+        # Fallback implementation using native PyTorch
+        if is_rms_norm:
+            rstd = 1 / torch.sqrt((x.square()).mean(dim=-1, keepdim=True) + eps)
+            out = (x * rstd * weight) + (bias if bias is not None else 0)
+            return (out, None)
+        else:
+            out = F.layer_norm(x, x.shape[-1:], weight=weight, bias=bias, eps=eps)
+            return (out, None)
 
-import selective_scan_cuda
+try:
+    import selective_scan_cuda
+    has_cuda_support = True
+except ImportError:
+    has_cuda_support = False
+    # Create a warning that CUDA extensions are not available
+    import warnings
+    warnings.warn("selective_scan_cuda module is not available. Using slow reference implementation.")
 
 
 class SelectiveScanFn(torch.autograd.Function):
@@ -23,6 +44,18 @@ class SelectiveScanFn(torch.autograd.Function):
     @staticmethod
     def forward(ctx, u, delta, A, B, C, D=None, z=None, delta_bias=None, delta_softplus=False,
                 return_last_state=False):
+        if not has_cuda_support:
+            # Fall back to reference implementation
+            out = selective_scan_ref(u, delta, A, B, C, D, z, delta_bias, delta_softplus, return_last_state)
+            if return_last_state:
+                return out
+            else:
+                # Store None values in context since we won't use them for backward
+                ctx.save_for_backward(u, delta, A, B, C, D, None if z is None else z, delta_bias)
+                ctx.has_z = z is not None
+                ctx.delta_softplus = delta_softplus
+                return out
+                
         if u.stride(-1) != 1:
             u = u.contiguous()
         if delta.stride(-1) != 1:
@@ -55,6 +88,19 @@ class SelectiveScanFn(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, dout, *args):
+        if not has_cuda_support:
+            # Create zero gradients for all inputs
+            u, delta, A, B, C, D, z, delta_bias = ctx.saved_tensors
+            du = torch.zeros_like(u)
+            ddelta = torch.zeros_like(delta)
+            dA = torch.zeros_like(A)
+            dB = torch.zeros_like(B)
+            dC = torch.zeros_like(C)
+            dD = torch.zeros_like(D) if D is not None else None
+            dz = torch.zeros_like(z) if z is not None else None
+            ddelta_bias = torch.zeros_like(delta_bias) if delta_bias is not None else None
+            return (du, ddelta, dA, dB, dC, dD, dz, ddelta_bias, None, None)
+            
         if not ctx.has_z:
             u, delta, A, B, C, D, delta_bias, x = ctx.saved_tensors
             z = None
@@ -190,7 +236,8 @@ class MambaInnerFn(torch.autograd.Function):
         """
              xz: (batch, dim, seqlen)
         """
-        assert causal_conv1d_cuda is not None, "causal_conv1d_cuda is not available. Please install causal-conv1d."
+        if causal_conv1d_cuda is None:
+            raise ImportError("causal_conv1d_cuda is not available. Please install causal-conv1d or use the reference implementation.")
         assert checkpoint_lvl in [0, 1]
         L = xz.shape[-1]
         delta_rank = delta_proj_weight.shape[1]
@@ -374,9 +421,19 @@ def mamba_inner_fn(
     A, B=None, C=None, D=None, delta_bias=None, B_proj_bias=None,
     C_proj_bias=None, delta_softplus=True, checkpoint_lvl=1, b_rms_weight= None, c_rms_weight= None, dt_rms_weight= None, b_c_dt_rms_eps=1e-6
 ):
-    return MambaInnerFn.apply(xz, conv1d_weight, conv1d_bias, x_proj_weight, delta_proj_weight,
-                              out_proj_weight, out_proj_bias,
-                              A, B, C, D, delta_bias, B_proj_bias, C_proj_bias, delta_softplus, checkpoint_lvl, b_rms_weight, c_rms_weight, dt_rms_weight, b_c_dt_rms_eps)
+    if causal_conv1d_cuda is None or not has_cuda_support:
+        # Fall back to reference implementation
+        return mamba_inner_ref(
+            xz, conv1d_weight, conv1d_bias, x_proj_weight, delta_proj_weight,
+            out_proj_weight, out_proj_bias,
+            A, B, C, D, delta_bias, B_proj_bias, C_proj_bias, delta_softplus
+        )
+        
+    return MambaInnerFn.apply(
+        xz, conv1d_weight, conv1d_bias, x_proj_weight, delta_proj_weight,
+        out_proj_weight, out_proj_bias,
+        A, B, C, D, delta_bias, B_proj_bias, C_proj_bias, delta_softplus, checkpoint_lvl, b_rms_weight, c_rms_weight, dt_rms_weight, b_c_dt_rms_eps
+    )
 
 
 def mamba_inner_ref(

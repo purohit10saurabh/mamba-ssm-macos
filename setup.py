@@ -1,29 +1,22 @@
 # Copyright (c) 2023, Albert Gu, Tri Dao.
-import sys
-import warnings
-import os
-import re
 import ast
-from pathlib import Path
-from packaging.version import parse, Version
+import os
 import platform
+import re
 import shutil
-
-from setuptools import setup, find_packages
 import subprocess
-
-import urllib.request
+import sys
 import urllib.error
-from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
+import urllib.request
+import warnings
+from pathlib import Path
 
 import torch
-from torch.utils.cpp_extension import (
-    BuildExtension,
-    CUDAExtension,
-    CUDA_HOME,
-    HIP_HOME
-)
-
+from packaging.version import Version, parse
+from setuptools import find_packages, setup
+from torch.utils.cpp_extension import (CUDA_HOME, HIP_HOME, BuildExtension,
+                                       CUDAExtension)
+from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
@@ -163,7 +156,7 @@ if not SKIP_CUDA_BUILD:
     else:
         check_if_cuda_home_none(PACKAGE_NAME)
         # Check, if CUDA11 is installed for compute capability 8.0
-
+        bare_metal_version = None
         if CUDA_HOME is not None:
             _, bare_metal_version = get_cuda_bare_metal_version(CUDA_HOME)
             if bare_metal_version < Version("11.6"):
@@ -185,7 +178,7 @@ if not SKIP_CUDA_BUILD:
         cc_flag.append("-gencode")
         cc_flag.append("arch=compute_87,code=sm_87")
 
-        if bare_metal_version >= Version("11.8"):
+        if bare_metal_version is not None and bare_metal_version >= Version("11.8"):
             cc_flag.append("-gencode")
             cc_flag.append("arch=compute_90,code=sm_90")
 
@@ -276,14 +269,18 @@ def get_wheel_url():
     else:
         # We're using the CUDA version used to build torch, not the one currently installed
         # _, cuda_version_raw = get_cuda_bare_metal_version(CUDA_HOME)
-        torch_cuda_version = parse(torch.version.cuda)
-        # For CUDA 11, we only compile for CUDA 11.8, and for CUDA 12 we only compile for CUDA 12.3
-        # to save CI time. Minor versions should be compatible.
-        torch_cuda_version = parse("11.8") if torch_cuda_version.major == 11 else parse("12.3")
-        cuda_version = f"{torch_cuda_version.major}"
+        # Check if torch.version.cuda is None (e.g., on macOS Apple Silicon)
+        if torch.version.cuda is None:
+            cuda_version = "cpu"
+        else:
+            torch_cuda_version = parse(torch.version.cuda)
+            # For CUDA 11, we only compile for CUDA 11.8, and for CUDA 12 we only compile for CUDA 12.3
+            # to save CI time. Minor versions should be compatible.
+            torch_cuda_version = parse("11.8") if torch_cuda_version.major == 11 else parse("12.3")
+            cuda_version = f"{torch_cuda_version.major}"
 
     gpu_compute_version = hip_ver if HIP_BUILD else cuda_version
-    cuda_or_hip = "hip" if HIP_BUILD else "cu"
+    cuda_or_hip = "hip" if HIP_BUILD else ("cpu" if cuda_version == "cpu" else "cu")
 
     python_version = f"cp{sys.version_info.major}{sys.version_info.minor}"
     platform_name = get_platform()
@@ -371,7 +368,8 @@ setup(
         "packaging",
         "ninja",
         "einops",
-        "triton",
+        # Make triton optional to allow installation on macOS Apple Silicon
+        "triton; platform_system!='Darwin' or platform_machine!='arm64'",
         "transformers",
         # "causal_conv1d>=1.4.0",
     ],
