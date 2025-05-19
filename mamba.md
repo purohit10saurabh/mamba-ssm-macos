@@ -1,0 +1,13 @@
+# Tasks
+- search for **all the missing features** in running mamba2 for macos by looking for featues in benchmark script then checking if it is implemented for macos in the entire repo.
+- list all the features in a table with the following columns:
+  - Feature
+  - Description
+  - Status (Implemented/Not Implemented)
+  - Notes (if any)
+- save the table in a markdown file called missing_features.md
+- Implement the missing features in the repo one at a time. 
+- For each implemented feature:
+  - Test the feature to ensure it works correctly.
+  - Update the status in the missing_features.md file.
+  - Document the implementation in the newly created markdown file called implementation_notes.md.
