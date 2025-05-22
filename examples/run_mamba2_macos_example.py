@@ -159,9 +159,18 @@ class Mamba2MacOSModel(nn.Module):
                 logits[indices_to_remove] = float('-inf')
             
             # Apply repetition penalty
-            if repetition_penalty != 1.0:
-                for token in past_tokens:
-                    logits[:, token] /= repetition_penalty
+            if repetition_penalty != 1.0 and len(past_tokens) > 0:
+                past_token_indices = torch.tensor(list(past_tokens), device=logits.device)
+                repeated_logits = torch.gather(logits, 1, past_token_indices.unsqueeze(0).expand(logits.shape[0], -1))
+                
+                # Apply penalty according to Hugging Face implementation
+                # For positive logits, divide by penalty
+                repeated_logits[repeated_logits >= 0] /= repetition_penalty
+                # For negative logits, multiply by penalty
+                repeated_logits[repeated_logits < 0] *= repetition_penalty
+                
+                # Scatter the penalized logits back to the original logits tensor
+                logits.scatter_(1, past_token_indices.unsqueeze(0).expand(logits.shape[0], -1), repeated_logits)
             
             # Sample next token
             probs = torch.softmax(logits, dim=-1)

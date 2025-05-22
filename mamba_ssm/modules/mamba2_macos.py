@@ -71,8 +71,13 @@ class Mamba2MacOS(nn.Module):
         self.D = nn.Parameter(torch.ones(self.d_inner, **factory_kwargs))
         
         # Delta time projection
-        self.dt_proj = nn.Linear(self.nheads, self.d_inner, bias=True, **factory_kwargs)
-        
+        self.dt_proj = nn.Linear(
+            self.d_inner,
+            self.nheads + 2 * self.d_state,
+            bias=True,
+            **factory_kwargs,
+        )
+                
         # Initialize dt bias
         dt = torch.exp(
             torch.rand(self.nheads, **factory_kwargs) * (math.log(dt_max) - math.log(dt_min))
@@ -202,7 +207,7 @@ class Mamba2MacOS(nn.Module):
         dA = torch.exp(dt.unsqueeze(-1) * A)  # (batch_size, nheads, d_state)
         ssm_state = ssm_state * dA + torch.einsum("bh,bn->bhn", B, x)
         y = torch.einsum("bhn,bn->bh", ssm_state, C)
-        y = y + self.D * x
+        y = y + self.D.view(self.nheads, self.headdim) * x
         
         # Reshape back
         y = rearrange(y, "b h p -> b (h p)")

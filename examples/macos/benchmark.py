@@ -102,7 +102,6 @@ def run_selective_scan_benchmark(batch_size=2, seq_len=128, hidden_dim=16, d_sta
             delta = delta.transpose(1, 2)  # from (B, L, D) to (B, D, L)
             output, _ = selective_scan_fn(
                 u, delta, A, B, C, D,
-                is_variable_B=True, is_variable_C=True,
                 delta_bias=None, delta_softplus=True
             )
             return output
