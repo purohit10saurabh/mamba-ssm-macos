@@ -1,8 +1,9 @@
 [project]
-name = "mamba_ssm"
-description = "Mamba state-space model"
+name = "mamba_ssm_macos"
+description = "Mamba state-space model for macos"
 readme = "README.md"
 authors = [
+    { name = "Saurabh Purohit", email = "saurabh97purohit@gmail.com" },
     { name = "Tri Dao", email = "tri@tridao.me" },
     { name = "Albert Gu", email = "agu@cs.cmu.edu" }
 ]

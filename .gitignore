@@ -4,3 +4,6 @@ build/
 **.so
 *.hip
 *_hip.*
+*.md
+!README.md
+.vscode/

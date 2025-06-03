@@ -34,6 +34,85 @@ class TestMamba2MacOS(unittest.TestCase):
         # Check output shape
         self.assertEqual(out.shape, (batch_size, seq_len, d_model))
     
+    def test_shape_consistency_large_model(self):
+        """Test shape consistency with larger model dimensions (original bug case)."""
+        # Model parameters that triggered the original bug
+        d_model = 256
+        d_state = 64
+        headdim = 64
+        batch_size = 2
+        seq_len = 32
+        
+        # Create model with same config that failed before
+        model = Mamba2MacOS(
+            d_model=d_model,
+            d_state=d_state,
+            headdim=headdim,
+            d_conv=4,
+            expand=2
+        )
+        
+        # Create input
+        x = torch.randn(batch_size, seq_len, d_model)
+        
+        # Forward pass (this should not fail with einops error)
+        out = model(x)
+        
+        # Check output shape
+        self.assertEqual(out.shape, (batch_size, seq_len, d_model))
+        
+        # Verify internal dimensions
+        self.assertEqual(model.d_inner, 512)  # expand * d_model
+        self.assertEqual(model.nheads, 8)     # d_inner // headdim
+        self.assertEqual(model.headdim, 64)
+    
+    def test_tensor_shape_flow(self):
+        """Test intermediate tensor shapes throughout forward pass."""
+        d_model = 128
+        d_state = 32
+        headdim = 32
+        batch_size = 2
+        seq_len = 16
+        
+        model = Mamba2MacOS(
+            d_model=d_model,
+            d_state=d_state,
+            headdim=headdim,
+            d_conv=4,
+            expand=2
+        )
+        
+        x = torch.randn(batch_size, seq_len, d_model)
+        
+        # Hook to capture intermediate shapes
+        shapes = {}
+        
+        def hook_fn(name):
+            def hook(module, input, output):
+                if isinstance(output, torch.Tensor):
+                    shapes[name] = output.shape
+                elif isinstance(output, tuple):
+                    shapes[name] = tuple(o.shape if isinstance(o, torch.Tensor) else str(o) for o in output)
+            return hook
+        
+        # Register hooks
+        model.in_proj.register_forward_hook(hook_fn('in_proj'))
+        model.conv1d.register_forward_hook(hook_fn('conv1d'))
+        model.dt_proj.register_forward_hook(hook_fn('dt_proj'))
+        model.norm.register_forward_hook(hook_fn('norm'))
+        model.out_proj.register_forward_hook(hook_fn('out_proj'))
+        
+        # Forward pass
+        out = model(x)
+        
+        # Verify key intermediate shapes
+        self.assertEqual(shapes['in_proj'], (batch_size, seq_len, model.d_inner * 2))
+        # Note: conv1d adds padding (d_conv-1=3), so output is seq_len + 3 = 19
+        # but it gets truncated back to seq_len in the forward pass
+        self.assertEqual(shapes['conv1d'], (batch_size, model.d_inner, seq_len + model.d_conv - 1))
+        self.assertEqual(shapes['norm'], (batch_size, seq_len, model.d_inner))
+        self.assertEqual(shapes['out_proj'], (batch_size, seq_len, d_model))
+    
     def test_inference_cache(self):
         """Test inference cache allocation and usage."""
         # Model parameters
@@ -87,6 +166,64 @@ class TestMamba2MacOS(unittest.TestCase):
         self.assertEqual(new_conv_state.shape, conv_state.shape)
         self.assertEqual(new_ssm_state.shape, ssm_state.shape)
     
+    def test_step_function_large_model(self):
+        """Test step function with the same config that had shape bugs."""
+        d_model = 256
+        d_state = 64
+        headdim = 64
+        batch_size = 2
+        
+        model = Mamba2MacOS(
+            d_model=d_model,
+            d_state=d_state,
+            headdim=headdim,
+            d_conv=4,
+            expand=2
+        )
+        
+        x = torch.randn(batch_size, 1, d_model)
+        conv_state, ssm_state = model.allocate_inference_cache(batch_size, 1)
+        
+        # This should not fail with tensor shape mismatches
+        out, new_conv_state, new_ssm_state = model.step(x, conv_state, ssm_state)
+        
+        self.assertEqual(out.shape, (batch_size, 1, d_model))
+        self.assertEqual(new_conv_state.shape, (batch_size, model.d_inner, model.d_conv))
+        self.assertEqual(new_ssm_state.shape, (batch_size, model.nheads, d_state))
+    
+    def test_multiple_step_consistency(self):
+        """Test that multiple step calls maintain consistency."""
+        d_model = 128
+        d_state = 32
+        headdim = 32
+        batch_size = 2
+        num_steps = 5
+        
+        model = Mamba2MacOS(
+            d_model=d_model,
+            d_state=d_state,
+            headdim=headdim,
+            d_conv=4,
+            expand=2
+        )
+        
+        conv_state, ssm_state = model.allocate_inference_cache(batch_size, 1)
+        outputs = []
+        
+        # Run multiple steps
+        for i in range(num_steps):
+            x = torch.randn(batch_size, 1, d_model)
+            out, conv_state, ssm_state = model.step(x, conv_state, ssm_state)
+            outputs.append(out)
+            
+            # Verify shapes remain consistent
+            self.assertEqual(out.shape, (batch_size, 1, d_model))
+            self.assertEqual(conv_state.shape, (batch_size, model.d_inner, model.d_conv))
+            self.assertEqual(ssm_state.shape, (batch_size, model.nheads, d_state))
+        
+        # Verify we got all outputs
+        self.assertEqual(len(outputs), num_steps)
+    
     def test_variable_length(self):
         """Test handling of variable length sequences."""
         # Model parameters
@@ -114,6 +251,35 @@ class TestMamba2MacOS(unittest.TestCase):
         # Check output shapes
         self.assertEqual(out1.shape, (batch_size, seq_lens[0], d_model))
         self.assertEqual(out2.shape, (batch_size, seq_lens[1], d_model))
+    
+    def test_different_headdim_configs(self):
+        """Test different headdim configurations that could cause shape issues."""
+        d_model = 192
+        d_state = 48
+        batch_size = 2
+        seq_len = 16
+        
+        # Test different headdim values
+        headdims = [32, 48, 64]
+        
+        for headdim in headdims:
+            with self.subTest(headdim=headdim):
+                model = Mamba2MacOS(
+                    d_model=d_model,
+                    d_state=d_state,
+                    headdim=headdim,
+                    d_conv=4,
+                    expand=2
+                )
+                
+                # Verify nheads calculation
+                expected_nheads = model.d_inner // headdim
+                self.assertEqual(model.nheads, expected_nheads)
+                
+                # Test forward pass
+                x = torch.randn(batch_size, seq_len, d_model)
+                out = model(x)
+                self.assertEqual(out.shape, (batch_size, seq_len, d_model))
     
     def test_gradient_flow(self):
         """Test that gradients flow correctly through the model."""
@@ -151,4 +317,50 @@ class TestMamba2MacOS(unittest.TestCase):
         self.assertIsNotNone(model.conv1d.weight.grad)
         self.assertIsNotNone(model.A_log.grad)
         self.assertIsNotNone(model.D.grad)
-        self.assertIsNotNone(model.dt_bias.grad) 
+        self.assertIsNotNone(model.dt_bias.grad)
+    
+    def test_edge_case_dimensions(self):
+        """Test edge cases with unusual dimension configurations."""
+        test_configs = [
+            {"d_model": 32, "d_state": 8, "headdim": 16},   # Small model
+            {"d_model": 512, "d_state": 128, "headdim": 128}, # Large model
+            {"d_model": 96, "d_state": 24, "headdim": 24},   # Non-power-of-2
+        ]
+        
+        batch_size = 1
+        seq_len = 4
+        
+        for config in test_configs:
+            with self.subTest(**config):
+                model = Mamba2MacOS(
+                    d_model=config["d_model"],
+                    d_state=config["d_state"],
+                    headdim=config["headdim"],
+                    d_conv=4,
+                    expand=2
+                )
+                
+                x = torch.randn(batch_size, seq_len, config["d_model"])
+                
+                # Should not raise any shape-related errors
+                out = model(x)
+                self.assertEqual(out.shape, (batch_size, seq_len, config["d_model"]))
+
+
+if __name__ == '__main__':
+    # Remove debug logging for tests
+    import io
+    import sys
+
+    # Capture stdout to hide debug prints during tests
+    old_stdout = sys.stdout
+    sys.stdout = buffer = io.StringIO()
+    
+    try:
+        unittest.main(verbosity=2)
+    finally:
+        sys.stdout = old_stdout
+        # Print any important output
+        output = buffer.getvalue()
+        if "FAILED" in output or "ERROR" in output:
+            print(output) 

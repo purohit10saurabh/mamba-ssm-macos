@@ -348,9 +348,9 @@ setup(
             "mamba_ssm.egg-info",
         )
     ),
-    author="Tri Dao, Albert Gu",
-    author_email="tri@tridao.me, agu@cs.cmu.edu",
-    description="Mamba state-space model",
+    author="Saurabh Purohit, Tri Dao, Albert Gu",
+    author_email="saurabh97purohit@gmail.com, tri@tridao.me, agu@cs.cmu.edu",
+    description="Mamba state-space model for macos",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/state-spaces/mamba",

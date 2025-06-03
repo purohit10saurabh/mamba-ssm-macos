@@ -1,4 +1,5 @@
 import sys
+from importlib.metadata import version
 
 import torch
 from einops import rearrange, reduce, repeat
@@ -12,6 +13,10 @@ print("Note: Using reference implementations as CUDA/Triton extensions are not s
 sys.path.insert(0, '.')
 exec(open('mamba_ssm/__init__.py').readlines()[0])
 print(f"Mamba SSM version: {__version__}")
+
+# Get version using importlib.metadata
+mamba_ssm_version = version('mamba-ssm')
+print(f"Mamba SSM version: {mamba_ssm_version}")
 
 # Define a minimal SSM reference implementation
 def simple_ssm_scan(x, A, B, C, D=None):

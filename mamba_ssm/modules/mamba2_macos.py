@@ -99,13 +99,11 @@ class Mamba2MacOS(nn.Module):
     def forward(self, hidden_states, inference_params=None, seq_idx=None, cu_seqlens=None):
         """
         Forward pass of the Mamba2 block.
-        
         Args:
             hidden_states: Input tensor of shape (batch_size, seq_len, d_model)
             inference_params: Optional inference parameters for caching states
             seq_idx: Optional sequence indices for variable length sequences
             cu_seqlens: Optional cumulative sequence lengths for variable length sequences
-            
         Returns:
             Output tensor of shape (batch_size, seq_len, d_model)
         """
@@ -113,35 +111,39 @@ class Mamba2MacOS(nn.Module):
         
         # Project input to get x and z streams
         xz = self.in_proj(hidden_states)  # (batch_size, seq_len, d_inner*2)
-        x, z = xz.chunk(2, dim=-1)  # Each: (batch_size, seq_len, d_inner)
+        x, z = xz.chunk(2, dim=-1)       # Each: (batch_size, seq_len, d_inner)
         
         # Apply convolution
-        x = x.transpose(1, 2)  # (batch_size, d_inner, seq_len)
-        x = self.conv1d(x)[..., :seq_len]  # (batch_size, d_inner, seq_len)
-        x = x.transpose(1, 2)  # (batch_size, seq_len, d_inner)
+        x = x.transpose(1, 2)            # (batch_size, d_inner, seq_len)
+        x = self.conv1d(x)[..., :seq_len]# (batch_size, d_inner, seq_len)
         x = self.act(x)
         
         # Project to get delta, B, and C
-        x_proj = self.dt_proj(x)  # (batch_size, seq_len, d_inner)
+        x_dbl = rearrange(x, "b d l -> (b l) d")  # Flatten for projection
+        x_proj = self.dt_proj(x_dbl)     # (batch_size*seq_len, nheads+2*d_state)
         dt, B, C = torch.split(x_proj, [self.nheads, self.d_state, self.d_state], dim=-1)
         
-        # Process delta
-        dt = F.softplus(dt + self.dt_bias)  # (batch_size, seq_len, nheads)
+        # Reshape back to proper dimensions
+        dt = rearrange(dt, "(b l) h -> b h l", l=seq_len)  # (batch_size, nheads, seq_len)
+        dt = repeat(dt, "b h l -> b (h p) l", p=self.headdim)  # (batch_size, d_inner, seq_len)
+        dt = F.softplus(dt + repeat(self.dt_bias, "h -> (h p)", p=self.headdim).unsqueeze(-1))
         
-        # Get A matrix
-        A = -torch.exp(self.A_log)  # (d_inner, d_state)
+        B = rearrange(B, "(b l) n -> b 1 n l", l=seq_len)  # (batch_size, 1, d_state, seq_len)
+        C = rearrange(C, "(b l) n -> b 1 n l", l=seq_len)  # (batch_size, 1, d_state, seq_len)
         
-        # Reshape for selective scan
-        x = rearrange(x, "b l (h p) -> b l h p", p=self.headdim)
-        B = rearrange(B, "b l n -> b l 1 n")
-        C = rearrange(C, "b l n -> b l 1 n")
+        # SSM matrices per head
+        A = -torch.exp(self.A_log).view(self.d_inner, self.d_state)  # (d_inner, d_state)
+        D = self.D  # (d_inner,)
+        
+        # Prepare z for selective scan (transpose to B, D, L format)
+        z = z.transpose(1, 2)  # (batch_size, d_inner, seq_len)
         
         # Apply selective scan
         y = selective_scan_fn(
-            x, dt, A, B, C, self.D,
+            x, dt, A, B, C, D,
             z=z,
             delta_bias=None,
-            delta_softplus=True,
+            delta_softplus=False,  # Already applied softplus above
             return_last_state=inference_params is not None
         )
         
@@ -150,35 +152,30 @@ class Mamba2MacOS(nn.Module):
             if self.layer_idx is not None:
                 inference_params.key_value_memory_dict[self.layer_idx] = last_state
         
-        # Reshape back
-        y = rearrange(y, "b l h p -> b l (h p)")
+        # Transpose back to (batch, seq_len, d_inner)
+        y = y.transpose(1, 2)  # (batch_size, seq_len, d_inner)
         
-        # Apply normalization and gate
+        # Apply normalization
         y = self.norm(y)
-        y = y * torch.sigmoid(z)
         
         # Project to output dimension
-        output = self.out_proj(y)
-        
-        return output
+        return self.out_proj(y)
     
     def step(self, hidden_states, conv_state, ssm_state):
         """
         Step function for autoregressive generation.
-        
         Args:
             hidden_states: Input tensor of shape (batch_size, 1, d_model)
             conv_state: Convolution state
             ssm_state: SSM state
-            
         Returns:
             Tuple of (output, new_conv_state, new_ssm_state)
         """
         batch_size = hidden_states.shape[0]
         
         # Project input
-        xz = self.in_proj(hidden_states.squeeze(1))  # (batch_size, d_inner*2)
-        x, z = xz.chunk(2, dim=-1)  # Each: (batch_size, d_inner)
+        xz = self.in_proj(hidden_states.squeeze(1))
+        x, z = xz.chunk(2, dim=-1)
         
         # Update conv state
         conv_state = torch.roll(conv_state, shifts=-1, dims=-1)
@@ -188,48 +185,35 @@ class Mamba2MacOS(nn.Module):
             x = x + self.conv1d.bias
         x = self.act(x)
         
-        # Project to get delta, B, and C
-        x_proj = self.dt_proj(x)  # (batch_size, d_inner)
+        # Project for delta, B, C
+        x_proj = self.dt_proj(x)
         dt, B, C = torch.split(x_proj, [self.nheads, self.d_state, self.d_state], dim=-1)
+        dt = F.softplus(dt + self.dt_bias)
         
-        # Process delta
-        dt = F.softplus(dt + self.dt_bias)  # (batch_size, nheads)
+        # Reshape x to multi-head format
+        x = rearrange(x, "b (h p) -> b h p", h=self.nheads, p=self.headdim)
         
-        # Get A matrix
-        A = -torch.exp(self.A_log)  # (d_inner, d_state)
+        # Per-head SSM parameters
+        A = -torch.exp(self.A_log).view(self.nheads, self.headdim, self.d_state)
+        D = self.D.view(self.nheads, self.headdim)
         
-        # Reshape for selective scan
-        x = rearrange(x, "b (h p) -> b h p", p=self.headdim)
-        B = rearrange(B, "b n -> b 1 n")
-        C = rearrange(C, "b n -> b 1 n")
+        # Update SSM state manually with corrected shapes
+        # dt: (batch, nheads), B: (batch, d_state), C: (batch, d_state)
+        # ssm_state: (batch, nheads, d_state), x: (batch, nheads, headdim)
+        dA = torch.exp(dt.unsqueeze(-1) * A.sum(dim=1))  # (batch, nheads, d_state)
+        dB_u = torch.einsum("bh,bn,bhp->bhn", dt, B, x)  # (batch, nheads, d_state)
+        ssm_state = ssm_state * dA + dB_u
+        y = torch.einsum("bhn,bn->bh", ssm_state, C) + (D * x).sum(dim=-1)  # (batch, nheads)
         
-        # Update SSM state
-        dA = torch.exp(dt.unsqueeze(-1) * A)  # (batch_size, nheads, d_state)
-        ssm_state = ssm_state * dA + torch.einsum("bh,bn->bhn", B, x)
-        y = torch.einsum("bhn,bn->bh", ssm_state, C)
-        y = y + self.D.view(self.nheads, self.headdim) * x
+        # Expand y back to full dimension
+        y = repeat(y, "b h -> b (h p)", p=self.headdim)
+        y = self.norm(y) * torch.sigmoid(z)
         
-        # Reshape back
-        y = rearrange(y, "b h p -> b (h p)")
-        
-        # Apply normalization and gate
-        y = self.norm(y)
-        y = y * torch.sigmoid(z)
-        
-        # Project to output dimension
-        output = self.out_proj(y)
-        
-        return output.unsqueeze(1), conv_state, ssm_state
+        return self.out_proj(y).unsqueeze(1), conv_state, ssm_state
     
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None):
         """
         Allocate cache for inference.
-        
-        Args:
-            batch_size: Batch size
-            max_seqlen: Maximum sequence length
-            dtype: Optional dtype for the cache
-            
         Returns:
             Tuple of (conv_state, ssm_state)
         """
@@ -244,4 +228,4 @@ class Mamba2MacOS(nn.Module):
             batch_size, self.nheads, self.d_state,
             device=device, dtype=ssm_dtype
         )
-        return conv_state, ssm_state 
+        return conv_state, ssm_state
