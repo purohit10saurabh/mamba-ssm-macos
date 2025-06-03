@@ -35,15 +35,15 @@ class TestMamba2MacOS(unittest.TestCase):
         self.assertEqual(out.shape, (batch_size, seq_len, d_model))
     
     def test_shape_consistency_large_model(self):
-        """Test shape consistency with larger model dimensions (original bug case)."""
-        # Model parameters that triggered the original bug
+        """Test shape consistency with larger model dimensions."""
+        # Model parameters for larger configurations
         d_model = 256
         d_state = 64
         headdim = 64
         batch_size = 2
         seq_len = 32
         
-        # Create model with same config that failed before
+        # Create model with larger configuration
         model = Mamba2MacOS(
             d_model=d_model,
             d_state=d_state,
@@ -55,7 +55,7 @@ class TestMamba2MacOS(unittest.TestCase):
         # Create input
         x = torch.randn(batch_size, seq_len, d_model)
         
-        # Forward pass (this should not fail with einops error)
+        # Forward pass
         out = model(x)
         
         # Check output shape
@@ -167,7 +167,7 @@ class TestMamba2MacOS(unittest.TestCase):
         self.assertEqual(new_ssm_state.shape, ssm_state.shape)
     
     def test_step_function_large_model(self):
-        """Test step function with the same config that had shape bugs."""
+        """Test step function with larger model configuration."""
         d_model = 256
         d_state = 64
         headdim = 64
@@ -184,7 +184,7 @@ class TestMamba2MacOS(unittest.TestCase):
         x = torch.randn(batch_size, 1, d_model)
         conv_state, ssm_state = model.allocate_inference_cache(batch_size, 1)
         
-        # This should not fail with tensor shape mismatches
+        # Step function with larger model
         out, new_conv_state, new_ssm_state = model.step(x, conv_state, ssm_state)
         
         self.assertEqual(out.shape, (batch_size, 1, d_model))
@@ -253,7 +253,7 @@ class TestMamba2MacOS(unittest.TestCase):
         self.assertEqual(out2.shape, (batch_size, seq_lens[1], d_model))
     
     def test_different_headdim_configs(self):
-        """Test different headdim configurations that could cause shape issues."""
+        """Test different headdim configurations."""
         d_model = 192
         d_state = 48
         batch_size = 2
@@ -342,7 +342,7 @@ class TestMamba2MacOS(unittest.TestCase):
                 
                 x = torch.randn(batch_size, seq_len, config["d_model"])
                 
-                # Should not raise any shape-related errors
+                # Test forward pass with edge case dimensions
                 out = model(x)
                 self.assertEqual(out.shape, (batch_size, seq_len, config["d_model"]))
 

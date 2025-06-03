@@ -3,7 +3,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from einops import rearrange, repeat
+from einops import rearrange, reduce, repeat
 
 from mamba_ssm.ops.selective_scan_interface import selective_scan_fn
 
@@ -46,6 +46,10 @@ class Mamba2MacOS(nn.Module):
         self.d_inner = int(expand * d_model)
         self.headdim = headdim
         self.ngroups = ngroups
+        if self.d_inner % headdim != 0:
+            raise ValueError(
+                f"`d_inner` ({self.d_inner}) must be divisible by `headdim` ({headdim}) so that all channels are assigned to a head."
+            )
         self.nheads = self.d_inner // headdim
         self.chunk_size = chunk_size
         self.layer_idx = layer_idx
@@ -91,7 +95,14 @@ class Mamba2MacOS(nn.Module):
         self.out_proj = nn.Linear(self.d_inner, d_model, bias=bias, **factory_kwargs)
         
         # Activation function
-        self.act = nn.SiLU() if activation == "silu" else nn.SiLU()
+        if activation == "silu":
+            self.act = nn.SiLU()
+        elif activation == "gelu":
+            self.act = nn.GELU()
+        elif activation == "swish":
+            self.act = nn.SiLU()  # Swish and SiLU are equivalent
+        else:
+            raise ValueError(f"Unsupported activation: {activation}. Supported: 'silu', 'swish', 'gelu'")
         
         # Layer normalization
         self.norm = nn.LayerNorm(self.d_inner, eps=1e-5, **factory_kwargs)
@@ -126,7 +137,7 @@ class Mamba2MacOS(nn.Module):
         # Reshape back to proper dimensions
         dt = rearrange(dt, "(b l) h -> b h l", l=seq_len)  # (batch_size, nheads, seq_len)
         dt = repeat(dt, "b h l -> b (h p) l", p=self.headdim)  # (batch_size, d_inner, seq_len)
-        dt = F.softplus(dt + repeat(self.dt_bias, "h -> (h p)", p=self.headdim).unsqueeze(-1))
+        dt = F.softplus(dt + repeat(self.dt_bias, "h -> (h p)", p=self.headdim)[..., None])
         
         B = rearrange(B, "(b l) n -> b 1 n l", l=seq_len)  # (batch_size, 1, d_state, seq_len)
         C = rearrange(C, "(b l) n -> b 1 n l", l=seq_len)  # (batch_size, 1, d_state, seq_len)
@@ -200,16 +211,20 @@ class Mamba2MacOS(nn.Module):
         # Update SSM state manually with corrected shapes
         # dt: (batch, nheads), B: (batch, d_state), C: (batch, d_state)
         # ssm_state: (batch, nheads, d_state), x: (batch, nheads, headdim)
-        dA = torch.exp(dt.unsqueeze(-1) * A.sum(dim=1))  # (batch, nheads, d_state)
+        dA = torch.exp(dt[..., None, None] * A)  # (batch, nheads, headdim, d_state)
+        dA = reduce(dA, "b h p n -> b h n", "mean")  # Average over headdim to get (batch, nheads, d_state)
         dB_u = torch.einsum("bh,bn,bhp->bhn", dt, B, x)  # (batch, nheads, d_state)
         ssm_state = ssm_state * dA + dB_u
-        y = torch.einsum("bhn,bn->bh", ssm_state, C) + (D * x).sum(dim=-1)  # (batch, nheads)
+        y_ssm = torch.einsum("bhn,bn->bh", ssm_state, C)  # (batch, nheads)
+        y_ssm = repeat(y_ssm, "b h -> b h p", p=self.headdim)  # (batch, nheads, headdim)
+        y = y_ssm + D * x  # (batch, nheads, headdim)
         
-        # Expand y back to full dimension
-        y = repeat(y, "b h -> b (h p)", p=self.headdim)
+        # Flatten y to full dimension preserving per-channel information
+        y = rearrange(y, "b h p -> b (h p)")
+        assert y.shape == z.shape, f"Shape mismatch: y={y.shape}, z={z.shape}"
         y = self.norm(y) * torch.sigmoid(z)
         
-        return self.out_proj(y).unsqueeze(1), conv_state, ssm_state
+        return self.out_proj(y)[:, None, :], conv_state, ssm_state
     
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None):
         """

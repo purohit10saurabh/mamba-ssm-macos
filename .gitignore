@@ -5,5 +5,5 @@ build/
 *.hip
 *_hip.*
 *.md
-!README.md
+!/README.md
 .vscode/

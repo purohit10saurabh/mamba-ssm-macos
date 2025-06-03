@@ -52,16 +52,25 @@ class Mamba2MacOSModel(nn.Module):
         batch_size = input_ids.shape[0]
         device = input_ids.device
         
+        tokens_to_generate = max(0, max_length - input_ids.shape[1])
+        
+        if tokens_to_generate == 0:
+            if verbose:
+                print("No tokens to generate - input length meets or exceeds max_length")
+            return input_ids.clone()
+        
         inference_params = InferenceParams(max_seqlen=max_length, max_batch_size=batch_size)
         
         for layer_idx, layer in enumerate(self.layers):
-            cache_conv, cache_ssm = layer.allocate_inference_cache(batch_size, max_length, dtype=input_ids.dtype)
+            cache_conv, cache_ssm = layer.allocate_inference_cache(
+                batch_size,
+                max_length,
+                dtype=self.embedding.weight.dtype,
+            )
             inference_params.key_value_memory_dict[layer_idx] = (cache_conv, cache_ssm)
         
         past_tokens = set()
         generated_sequence = input_ids.clone()
-        
-        tokens_to_generate = max_length - input_ids.shape[1]
         
         for token_idx in range(tokens_to_generate):
             if verbose and token_idx % 10 == 0:
@@ -111,7 +120,7 @@ class Mamba2MacOSModel(nn.Module):
             next_token = torch.multinomial(probabilities, num_samples=1)
             
             generated_sequence = torch.cat([generated_sequence, next_token], dim=1)
-            past_tokens.add(next_token.item())
+            past_tokens.update(next_token.view(-1).tolist())
             
             if stop_token and next_token.item() == stop_token:
                 if verbose:

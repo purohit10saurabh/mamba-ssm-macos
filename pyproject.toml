@@ -1,32 +1,37 @@
 [project]
-name = "mamba_ssm_macos"
-description = "Mamba state-space model for macos"
+name = "mamba_ssm"
+description = "Mamba2MacOS - State Space Models optimized for Apple Silicon"
 readme = "README.md"
 authors = [
     { name = "Saurabh Purohit", email = "saurabh97purohit@gmail.com" },
     { name = "Tri Dao", email = "tri@tridao.me" },
     { name = "Albert Gu", email = "agu@cs.cmu.edu" }
 ]
-requires-python = ">= 3.9"
+requires-python = ">= 3.8"
 dynamic = ["version"]
-license = { file = "LICENSE" }  # Include a LICENSE file in your repo
-keywords = ["cuda", "pytorch", "state-space model"]
+license = { file = "LICENSE" }
+keywords = ["mamba", "apple-silicon", "macos", "mps", "state-space-model", "deep-learning"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: Apache Software License",
-    "Operating System :: Unix"
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Unix",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 dependencies = [
-    "torch",
-    "triton; platform_system!='Darwin' or platform_machine!='arm64'",
-    "ninja",
+    "torch>=1.12.0",
     "einops",
     "transformers",
     "packaging",
+    "ninja; platform_system!='Darwin' or platform_machine!='arm64'",
+    "triton; platform_system!='Darwin' or platform_machine!='arm64'",
     "setuptools>=61.0.0",
 ]
 [project.urls]
 Repository = "https://github.com/state-spaces/mamba"
+Homepage = "https://github.com/state-spaces/mamba"
+Documentation = "https://github.com/state-spaces/mamba#readme"
 
 [project.optional-dependencies]
 causal-conv1d = [
@@ -41,8 +46,8 @@ dev = [
 requires = [
     "setuptools>=61.0.0",
     "wheel",
-    "torch",
+    "torch>=1.12.0",
     "packaging",
-    "ninja",
+    "ninja; platform_system!='Darwin' or platform_machine!='arm64'",
 ]
 build-backend = "setuptools.build_meta"

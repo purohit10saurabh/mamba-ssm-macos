@@ -32,7 +32,7 @@ BASE_WHEEL_URL = "https://github.com/state-spaces/mamba/releases/download/{tag_n
 # FORCE_BUILD: Force a fresh build locally, instead of attempting to find prebuilt wheels
 # SKIP_CUDA_BUILD: Intended to allow CI to use a simple `python setup.py sdist` run to copy over raw files, without any cuda compilation
 FORCE_BUILD = os.getenv("MAMBA_FORCE_BUILD", "FALSE") == "TRUE"
-SKIP_CUDA_BUILD = os.getenv("MAMBA_SKIP_CUDA_BUILD", "FALSE") == "TRUE"
+SKIP_CUDA_BUILD = True
 # For CI, we want the option to build with C++11 ABI since the nvcr images use C++11 ABI
 FORCE_CXX11_ABI = os.getenv("MAMBA_FORCE_CXX11_ABI", "FALSE") == "TRUE"
 
@@ -350,14 +350,17 @@ setup(
     ),
     author="Saurabh Purohit, Tri Dao, Albert Gu",
     author_email="saurabh97purohit@gmail.com, tri@tridao.me, agu@cs.cmu.edu",
-    description="Mamba state-space model for macos",
+    description="Mamba2MacOS - State Space Models optimized for Apple Silicon",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/state-spaces/mamba",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
+        "Operating System :: MacOS :: MacOS X",
         "Operating System :: Unix",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     ext_modules=ext_modules,
     cmdclass={"bdist_wheel": CachedWheelsCommand, "build_ext": BuildExtension}
@@ -365,15 +368,16 @@ setup(
     else {
         "bdist_wheel": CachedWheelsCommand,
     },
-    python_requires=">=3.9",
+    python_requires=">=3.8",
     install_requires=[
-        "torch",
+        "torch>=1.12.0",
         "packaging",
-        "ninja",
         "einops",
-        # Make triton optional to allow installation on macOS Apple Silicon
-        "triton; platform_system!='Darwin' or platform_machine!='arm64'",
         "transformers",
-        # "causal_conv1d>=1.4.0",
+        # Ninja only needed for compilation, optional for our use case
+        "ninja; platform_system!='Darwin' or platform_machine!='arm64'",
+        # Make triton optional for macOS Apple Silicon
+        "triton; platform_system!='Darwin' or platform_machine!='arm64'",
     ],
+    keywords=["mamba", "apple-silicon", "macos", "mps", "state-space-model", "deep-learning"],
 )
