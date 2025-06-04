@@ -34,8 +34,8 @@ Production-ready **Mamba2 SSM** implementation optimized for **macOS Apple Silic
 ```bash
 pip install torch torchvision torchaudio
 pip install einops transformers
-git clone <repository-url>
-cd mamba
+git clone <this-repository-url>
+cd mamba-ssm-macos
 pip install -e .
 ```
 
