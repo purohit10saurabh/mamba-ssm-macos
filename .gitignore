@@ -1,3 +1,4 @@
+.DS_Store
 *__pycache__/
 *.egg-info/
 build/
@@ -7,3 +8,4 @@ build/
 *.md
 !/README.md
 .vscode/
+models/

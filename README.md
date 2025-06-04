@@ -1,26 +1,32 @@
 # Mamba2MacOS - Apple Silicon Optimized
 
-![Mamba](assets/selection.png "Selective State Space")
-> **Mamba: Linear-Time Sequence Modeling with Selective State Spaces**\
-> Albert Gu*, Tri Dao*\
-> Paper: https://arxiv.org/abs/2312.00752
-
-![Mamba-2](assets/ssd_algorithm.png "State Space Dual Model")
-> **Transformers are SSMs: Generalized Models and Efficient Algorithms**\
->     **Through Structured State Space Duality**\
-> Tri Dao*, Albert Gu*\
-> Paper: https://arxiv.org/abs/2405.21060
+**[Mamba](https://arxiv.org/abs/2312.00752) & [Mamba2](https://arxiv.org/abs/2405.21060) SSM** implementation optimized for **macOS Apple Silicon** with MPS acceleration.
 
 ## About
 
-Production-ready **Mamba2 SSM** implementation optimized for **macOS Apple Silicon** with MPS acceleration.
+This repository provides both **Mamba** (original) and **Mamba2** (latest) implementations, with a focus on the superior **Mamba2** architecture for high-speed text generation and sequence modeling on Apple Silicon devices.
+
+This implementation leverages the **Metal Performance Shaders (MPS)** backend for PyTorch, ensuring optimal performance on Apple Silicon hardware.
+
+**Mamba2** is a state-of-the-art SSM architecture that offers superior performance and efficiency for text generation and sequence modeling on Apple Silicon devices. It is designed to be faster and more efficient than the original Mamba architecture, and is the recommended architecture for new projects.
+
+**Mamba** is the original Mamba architecture, which is stable and well-tested, and is recommended for existing projects and compatibility.
 
 ### 🚀 Key Features:
-- **Apple Silicon optimized** with MPS acceleration
+- **Dual architecture support** - Both Mamba (original) and Mamba2 (latest)
+- **Apple Silicon optimized** with fast generation and MPS acceleration  
 - **Mixed precision support** - FP32, FP16, BF16
-- **15-27K tokens/sec** on Apple Silicon
 - **Text generation** with configurable sampling
-- **13 comprehensive tests** - All passing
+- **13 comprehensive tests** - All passing on Apple Silicon
+
+### 🔄 Architecture Support:
+
+| Model | Status | Performance Focus | Use Case |
+|-------|--------|------------------|----------|
+| **Mamba2** | ✅ **Primary** | **Fast generation** | **Recommended for new projects** |
+| **Mamba** | ✅ **Legacy** | Stable & tested | Existing projects & compatibility |
+
+**Recommendation**: Use **Mamba2** for new projects - it offers superior performance and efficiency.
 
 ## Quick Start
 
@@ -43,12 +49,25 @@ pip install -e .
 
 ### Basic Usage
 
+**Mamba2 (Recommended)**:
 ```python
 import torch
 from mamba_ssm.modules.mamba2_macos import Mamba2MacOS
 
 device = "mps" if torch.backends.mps.is_available() else "cpu"
 model = Mamba2MacOS(d_model=512, d_state=32, device=device)
+
+x = torch.randn(2, 128, 512, device=device)
+y = model(x)  # Output: torch.Size([2, 128, 512])
+```
+
+**Original Mamba (Legacy)**:
+```python
+import torch
+from mamba_ssm.modules.mamba_simple import Mamba
+
+device = "mps" if torch.backends.mps.is_available() else "cpu"
+model = Mamba(d_model=512, d_state=16, device=device)
 
 x = torch.randn(2, 128, 512, device=device)
 y = model(x)  # Output: torch.Size([2, 128, 512])
@@ -79,19 +98,19 @@ python -m examples.06_advanced_analysis  # 🧬 Advanced topics
 
 ## Model Configurations
 
-| Size   | d_model | n_layer | Parameters | Performance    |
-|--------|---------|---------|------------|----------------|
-| small  | 256     | 4       | ~14.5M     | ~19 tok/s gen  |
-| medium | 512     | 8       | ~39.2M     | ~15 tok/s gen  |
-| large  | 768     | 12      | ~87M+      | ~12 tok/s gen  |
+| Size   | d_model | n_layer | Parameters |
+|--------|---------|---------|------------|
+| small  | 256     | 4       | ~14.5M     |
+| medium | 512     | 8       | ~39.2M     |
+| large  | 768     | 12      | ~87M+      |
 
 ## Mixed Precision
 
-| Mode | Status | Performance | Stability |
-|------|--------|-------------|-----------|
-| **FP32** | ✅ Recommended | ~82 tok/s | ✅ Stable |
-| **FP16** | ⚠️ Caution | ~80 tok/s | ⚠️ May be unstable |
-| **BF16** | 🧪 Experimental | ~79 tok/s | ⚠️ Limited support |
+| Mode | Status | Stability |
+|------|--------|-----------|
+| **FP32** | ✅ Recommended | ✅ Stable |
+| **FP16** | ⚠️ Caution | ⚠️ May be unstable |
+| **BF16** | 🧪 Experimental | ⚠️ Limited support | 
 
 **Recommendation**: Use FP32 for production on Apple Silicon.
 
@@ -131,12 +150,13 @@ python -m unittest tests.test_mamba_macos -v       # Legacy (2 tests)
 1. **MPS not available**: Check with `python -c "import torch; print(torch.backends.mps.is_available())"`
 2. **Memory issues**: Start with small model size, reduce batch size
 3. **Performance issues**: Ensure MPS is enabled, use appropriate model size
-4. **Generation quality**: Adjust temperature (0.7-1.0), note models use random initialization
+4. **Generation quality**: Adjust temperature, top_k, top_p, repetition_penalty.
 
 ## References
 
 - [Mamba Paper](https://arxiv.org/abs/2312.00752)
 - [Mamba-2 Paper](https://arxiv.org/abs/2405.21060)  
+- [Original Mamba Implementation](https://github.com/state-spaces/mamba)
 - [PyTorch MPS Documentation](https://pytorch.org/docs/stable/notes/mps.html)
 
 ---

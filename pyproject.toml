@@ -1,13 +1,11 @@
 [project]
-name = "mamba_ssm"
-description = "Mamba2MacOS - State Space Models optimized for Apple Silicon"
+name = "mamba_ssm_macos"
+description = "Mamba and Mamba2 SSM implementation for macOS Apple Silicon with MPS acceleration."
 readme = "README.md"
 authors = [
     { name = "Saurabh Purohit", email = "saurabh97purohit@gmail.com" },
-    { name = "Tri Dao", email = "tri@tridao.me" },
-    { name = "Albert Gu", email = "agu@cs.cmu.edu" }
 ]
-requires-python = ">= 3.8"
+requires-python = ">= 3.9"
 dynamic = ["version"]
 license = { file = "LICENSE" }
 keywords = ["mamba", "apple-silicon", "macos", "mps", "state-space-model", "deep-learning"]
@@ -29,9 +27,9 @@ dependencies = [
     "setuptools>=61.0.0",
 ]
 [project.urls]
-Repository = "https://github.com/state-spaces/mamba"
-Homepage = "https://github.com/state-spaces/mamba"
-Documentation = "https://github.com/state-spaces/mamba#readme"
+Repository = "https://github.com/purohit10saurabh/mamba-ssm-macos"
+Homepage = "https://github.com/purohit10saurabh/mamba-ssm-macos"
+Documentation = "https://github.com/purohit10saurabh/mamba-ssm-macos#readme"
 
 [project.optional-dependencies]
 causal-conv1d = [
