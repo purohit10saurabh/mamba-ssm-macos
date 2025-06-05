@@ -75,8 +75,12 @@ def load_downloaded_model(model_path, device="mps"):
                     logger.info(f"🔍 Creating SimpleMambaLM with config: {vars(config)}")
                     super().__init__()
                     self.config = config
-                    vocab_size = getattr(config, 'vocab_size', 50280)
-                    logger.info(f"🔍 Using vocab_size: {vocab_size}")
+                    try:
+                        temp_tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neox-20b")
+                        vocab_size = getattr(config, 'vocab_size', len(temp_tokenizer))
+                    except:
+                        vocab_size = getattr(config, 'vocab_size', 50280)
+                        logger.info(f"🔍 Using vocab_size: {vocab_size}")
                     
                     logger.info("🔍 Creating MixerModel backbone...")
                     self.backbone = MixerModel(
@@ -285,8 +289,9 @@ def main():
     print(f"\n📝 Generated text ({generation_time:.2f}s):")
     print(f"'{generated_text}'")
     
-    # Calculate performance metrics
-    tokens_generated = len(generated_text.split()) - len(args.prompt.split())
+    input_tokens = len(tokenizer.encode(args.prompt))
+    output_tokens = len(tokenizer.encode(generated_text))
+    tokens_generated = output_tokens - input_tokens
     if tokens_generated > 0 and generation_time > 0:
         tokens_per_sec = tokens_generated / generation_time
         print(f"\n📊 Performance: {tokens_per_sec:.1f} tokens/sec")

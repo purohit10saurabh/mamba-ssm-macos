@@ -92,7 +92,8 @@ def test_device_availability():
     if mps_available:
         assert torch.backends.mps.is_built()
     
-    assert mps_available or cuda_available or True
+    assert isinstance(mps_available, bool)
+    assert isinstance(cuda_available, bool)
 
 def test_missing_files_handling(mock_model_dir):
     (mock_model_dir / "mamba-130m-config.json").unlink()

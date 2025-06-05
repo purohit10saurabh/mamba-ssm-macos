@@ -16,10 +16,13 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).parent.parent))
 import torch
 
-from run_mamba import generate_text, load_downloaded_model
+try:
+    from run_mamba import generate_text, load_downloaded_model
+except ImportError:
+    sys.path.append(str(Path(__file__).parent.parent))
+    from run_mamba import generate_text, load_downloaded_model
 
 
 def interactive_mode(model, tokenizer, device):
@@ -221,6 +224,14 @@ def system_info():
         size_mb = model_file.stat().st_size / (1024 * 1024)
         print(f"   Size: {size_mb:.1f} MB")
 
+def calculate_performance(original_text, generated_text, generation_time):
+    """Calculate and return performance metrics."""
+    words_generated = len(generated_text.split()) - len(original_text.split())
+    if words_generated > 0 and generation_time > 0:
+        wps = words_generated / generation_time
+        return words_generated, wps
+    return 0, 0
+
 def main():
     parser = argparse.ArgumentParser(description="Downloaded Mamba Model Demo")
     parser.add_argument("--prompt", type=str, help="Single prompt to generate")
@@ -274,10 +285,8 @@ def main():
             print("-" * 50)
             print(generated_text)
             print("-" * 50)
-            
-            words_generated = len(generated_text.split()) - len(args.prompt.split())
-            if words_generated > 0 and gen_time > 0:
-                wps = words_generated / gen_time
+            words_generated, wps = calculate_performance(args.prompt, generated_text, gen_time)
+            if wps > 0:
                 print(f"📊 Performance: {wps:.1f} words/sec")
         else:
             print("❌ Generation failed")
@@ -291,4 +300,4 @@ def main():
         print("\nExample: python examples/07_downloaded_model_demo.py --demo")
 
 if __name__ == "__main__":
-    main() 
+    main()

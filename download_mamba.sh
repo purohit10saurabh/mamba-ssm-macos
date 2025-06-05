@@ -1,8 +1,8 @@
 #!/bin/bash
 
 DEST_DIR="./models"
-mkdir -p $DEST_DIR
-cd $DEST_DIR
+mkdir -p "$DEST_DIR"
+cd "$DEST_DIR"
 
 echo "🍎 Downloading Mamba 130M..."
 
