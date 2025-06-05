@@ -322,7 +322,10 @@ def run_mamba2_tests():
         else:
             print(f"❌ {len(result.failures)} failures, {len(result.errors)} errors")
             return False
-            
+    except ImportError as e:
+        print(f"❌ Import error: {e}")
+        print("Make sure mamba_ssm.modules.mamba2_macos is available")
+        return False
     except Exception as e:
         print(f"❌ Test execution error: {e}")
         return False

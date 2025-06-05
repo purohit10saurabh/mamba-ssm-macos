@@ -7,20 +7,20 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-MPS%20Accelerated-orange?logo=pytorch)](https://pytorch.org)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-## 🎯 What Works Out of the Box
+## Features
 
-✅ **Mamba 1 & 2 Support** - Inference of both architectures with pretrained models from Hugging Face
-✅ **High-Quality Generation** - Coherent, contextual text generation with high throughput  
-✅ **Apple Silicon Optimized** - MPS acceleration for M1/M2/M3/M4  
-✅ **No Dependencies Hell** - Works without CUDA/Triton requirements  
-✅ **Production Ready** - Robust error handling and fallbacks for both architectures  
-✅ **Multiple Interfaces** - CLI, Python API, interactive demos  
+- **Mamba 1 & 2 Support** - Inference of both architectures with pretrained models from Hugging Face
+- **Text Generation** - Coherent, contextual text generation 
+- **Apple Silicon Support** - MPS acceleration for M1/M2/M3/M4
+- **Dependency Management** - Works without CUDA/Triton requirements
+- **Error Handling** - Robust error handling and fallbacks for both architectures
+- **Multiple Interfaces** - CLI, Python API, interactive demos  
 
-## 🚀 Quick Start (30 seconds)
+## Quick Start
 
 ```bash
 # 1. Clone and install
-git clone <this-repository-url>
+git clone https://github.com/purohit10saurabh/mamba-ssm-macos.git
 cd mamba-ssm-macos
 pip install -r requirements.txt
 
@@ -31,35 +31,35 @@ python -m scripts.download_models mamba2    # Mamba 2 (493MB)
 # 3. Generate text immediately  
 make run-mamba1                              # Quick Mamba 1 demo
 make run-mamba2                              # Quick Mamba 2 demo
-python -m examples.09_perfect_structure_demo # Interactive showcase
+python -m examples.01_demo # Interactive showcase
 ```
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [🏗️ Architecture Comparison](#️-architecture-comparison)
-- [📥 Installation](#-installation)
-- [🎮 Usage Examples](#-usage-examples)
-- [📊 Performance](#-performance)
-- [🎨 Generated Examples](#-generated-examples)
-- [📁 Repository Structure](#-repository-structure)
-- [🔧 Advanced Usage](#-advanced-usage)
-- [🆘 Troubleshooting](#-troubleshooting)
-- [📚 References](#-references)
-- [🤝 Contributing](#-contributing)
+- [Architecture Comparison](#architecture-comparison)
+- [Installation](#installation)
+- [Usage Examples](#usage-examples)
+- [Performance](#performance)
+- [Generated Examples](#generated-examples)
+- [Repository Structure](#repository-structure)
+- [Advanced Usage](#advanced-usage)
+- [Troubleshooting](#troubleshooting)
+- [References](#references)
+- [Contributing](#contributing)
 
-## 🏗️ Architecture Comparison
+## Architecture Comparison
 
-| Feature | Mamba 1 | Mamba 2 🆕 |
+| Feature | Mamba 1 | Mamba 2 |
 |---------|---------|------------|
 | **Architecture** | SSM (Selective State Space) | SSD (State Space Dual) |
 | **Training Speed** | Standard | ~2x faster |
 | **State Dimension** | 16 | 128 (8x larger) |
-| **Multi-head** | ❌ | ✅ (via ngroups) |
+| **Multi-head** | No | Yes (via ngroups) |
 | **Memory Efficiency** | Good | Better |
 | **Generation Quality** | High | Higher |
 | **Model Size** | 129M params | 129M params |
 
-## 📥 Installation
+## Installation
 
 ### Prerequisites
 - **macOS 12.3+** with Apple Silicon (M1/M2/M3/M4)
@@ -69,7 +69,7 @@ python -m examples.09_perfect_structure_demo # Interactive showcase
 ### Setup
 ```bash
 # Clone repository
-git clone <this-repository-url>
+git clone https://github.com/purohit10saurabh/mamba-ssm-macos.git
 cd mamba-ssm-macos
 
 # Install dependencies (includes PyTorch with MPS support)
@@ -92,14 +92,14 @@ python -m scripts.download_models mamba1  # Mamba 1 (original)
 python -m scripts.download_models mamba2  # Mamba 2 (latest)
 ```
 
-## 🎮 Usage Examples
+## Usage Examples
 
-### Mamba 2 (Latest) 🆕
+### Mamba 2 (Latest)
 
 #### Quick Test
 ```bash
-python -m examples.09_perfect_structure_demo --interactive  # Try both models
-python -m examples.09_perfect_structure_demo --show-structure  # See organization
+python -m examples.01_demo --interactive  # Try both models
+python -m examples.01_demo --show-structure  # See organization
 ```
 
 #### Makefile Commands
@@ -115,7 +115,7 @@ make show-structure     # Show directory layout
 #### Mamba 1 & 2 via Scripts
 ```bash
 # Basic generation
-python -m scripts.run_models mamba1 --prompt "Hello world" --max-length 50
+python -m scripts.run_models mamba1 --prompt "The future of AI" --max-length 50
 python -m scripts.run_models mamba2 --prompt "The future of AI" --max-length 30
 
 # Custom parameters
@@ -133,7 +133,7 @@ success, model, tokenizer = load_and_prepare_model("mamba1", "./models", device)
 
 if success:
     text = generate_text_with_model(
-        model, tokenizer, "Hello world", device, max_length=50, temperature=0.7
+        model, tokenizer, "The future of AI", device, max_length=50, temperature=0.7
     )
     print(text)
 ```
@@ -146,14 +146,14 @@ python -m examples.03_understanding_ssm    # Learn SSM concepts
 python -m examples.01_text_generation      # Advanced generation
 ```
 
-## 📊 Performance
+## Performance
 
 ### Apple Silicon Results (for M1)
 
 | Model | Loading | Generation | Memory | Quality |
 |-------|---------|------------|--------|---------|
-| **Mamba 1** | ~1.0s | 3-8 tok/s | ~2GB | ⭐⭐⭐⭐ |
-| **Mamba 2** | ~1.0s | 3-6 tok/s | ~2GB | ⭐⭐⭐⭐⭐ |
+| **Mamba 1** | ~1.0s | 3-8 tok/s | ~2GB | Good |
+| **Mamba 2** | ~1.0s | 3-6 tok/s | ~2GB | Better |
 
 ### Benchmark Results
 ```bash
@@ -163,34 +163,34 @@ python -m examples.08_mamba2_demo --max-tokens 100
 ```
 
 **Mamba 2 Advantages:**
-- 🚀 **Similar loading speed**
-- 🧠 **Better context understanding** (d_state=128 vs 16)
-- 🎯 **Higher quality output** (SSD architecture)
-- ⚡ **More efficient training** (~2x faster during training)
+- Similar loading speed
+- Better context understanding (d_state=128 vs 16)
+- Higher quality output (SSD architecture)
+- More efficient training (~2x faster during training)
 
-## 🎨 Generated Examples
+## Generated Examples
 
-### Mamba 2 (SSD Architecture) 🆕
+### Mamba 2 (SSD Architecture)
 ```
-📝 "The future of artificial intelligence is a big topic in the field of artificial intelligence."
+"The future of artificial intelligence is a big topic in the field of artificial intelligence."
 
-📝 "Once upon a time, there was a man named John."
+"Once upon a time, there was a man named John."
 
-📝 "Python is a programming language that is used to create and manipulate objects."
+"Python is a programming language that is used to create and manipulate objects."
 
-📝 "The capital of France is a city of the French, and the"
+"The capital of France is a city of the French, and the"
 ```
 
 ### Mamba 1 (SSM Architecture)
 ```
-📝 "The future of AI is not in limited solipsistic computing, but in densely-connected 
+"The future of AI is not in limited solipsistic computing, but in densely-connected 
     and much richer data. In the next decade, we may be able to take advantage..."
 
-📝 "Once upon a time, in a land far away, there lived one lonely woman, who was 
+"Once upon a time, in a land far away, there lived one lonely woman, who was 
     much respected among wolves. She resided at a rendezvous called Buguqrach..."
 ```
 
-## 📁 Perfect Directory Structure
+## Repository Structure
 
 ```
 mamba-ssm-macos/
@@ -211,11 +211,9 @@ mamba-ssm-macos/
 │   └── integration/                  # End-to-end tests
 │       └── test_unified_system.py    # Complete workflow tests
 │
-├── 📚 examples/                      # 🆕 Curated examples
-│   ├── 09_perfect_structure_demo.py  # 🎯 START HERE - Showcase demo
-│   ├── 02_basic_usage.py             # Basic forward pass
-│   ├── 03_understanding_ssm.py       # Learn SSM concepts
-│   ├── 01_text_generation.py         # Advanced generation
+├── 📚 examples/                       # 🆕 Curated examples
+│   ├── 01_demo.py                    # 🎯 START HERE - Production demo
+│   └── 02_basic.py                   # Basic forward pass
 │   └── README.md                     # Examples guide
 │
 ├── ⚙️ config/                        # 🆕 Configuration files
@@ -239,7 +237,7 @@ mamba-ssm-macos/
 └── 📖 README.md                      # This file
 ```
 
-## 🔧 Advanced Usage
+## Advanced Usage
 
 ### Custom Model Configuration
 ```python
@@ -288,7 +286,7 @@ for batch in dataloader:
     optimizer.step()
 ```
 
-## 🆘 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -311,7 +309,7 @@ python -c "import torch; print(torch.backends.mps.is_available())"
 #### ❌ Import errors
 ```bash
 # Use new module structure
-python -m examples.09_perfect_structure_demo
+python -m examples.01_demo
 
 # Or run with clean imports
 from mamba_macos import get_device, load_and_prepare_model
@@ -333,19 +331,18 @@ These are expected - we use optimized PyTorch fallbacks.
 ### Getting Help
 1. 📖 **Read the docs**: Check `PROJECT_STRUCTURE.md` for organization details
 2. 🧪 **Run tests**: `make test-quick` or `make test` 
-3. 🔍 **Check examples**: `python -m examples.09_perfect_structure_demo --show-structure`
+3. 🔍 **Check examples**: `python -m examples.01_demo --show-structure`
 4. 🐛 **Report issues**: Create GitHub issue with error details
 
-## 🎓 Learning Path
+## Learning Path
 
 ### Beginners (Start Here)
 ```bash
-# 1. Perfect structure showcase
-python -m examples.09_perfect_structure_demo
+# 1. Production demo
+python -m examples.01_demo
 
-# 2. Quick demos
-make run-mamba1
-make run-mamba2
+# 2. Basic usage  
+python -m examples.02_basic
 
 # 3. Read the examples guide
 cat examples/README.md
@@ -360,7 +357,7 @@ python -m examples.03_understanding_ssm
 python -m examples.01_text_generation --model-size small
 
 # 3. Interactive testing  
-python -m examples.09_perfect_structure_demo --interactive
+python -m examples.01_demo --interactive
 ```
 
 ### Advanced Users
@@ -375,7 +372,7 @@ make test
 # Use src/mamba_macos as your import base
 ```
 
-## 🔬 Technical Details
+## Technical Details
 
 ### Mamba 2 Implementation Highlights
 - **State Space Dual (SSD)** architecture from official state-spaces/mamba
@@ -392,7 +389,7 @@ make test
 - **Memory efficient** selective scan implementation
 - **Compatible** with original mamba-130m weights
 
-## 🚀 What's Next?
+## What's Next?
 
 ### Immediate Use
 1. **Download model**: Choose Mamba 1 or 2
@@ -406,7 +403,7 @@ make test
 3. **Contribute**: Improve implementation or docs
 4. **Research**: Experiment with architectures
 
-## 📚 References
+## References
 
 ### Papers
 
@@ -444,7 +441,7 @@ make test
 - **Hungry Hungry Hippos**: [Fu et al., 2023](https://arxiv.org/abs/2212.14052) - H3 architecture  
 - **Apple Silicon**: [PyTorch MPS Guide](https://pytorch.org/docs/stable/notes/mps.html) - Metal Performance Shaders
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Areas for improvement:
 
@@ -456,18 +453,18 @@ We welcome contributions! Areas for improvement:
 
 ### Development Setup
 ```bash
-git clone <this-repository-url>
+git clone https://github.com/purohit10saurabh/mamba-ssm-macos.git
 cd mamba-ssm-macos
 pip install -e ".[dev]"
 pytest tests/
 ```
 
-## 📜 License
+## License
 
 Apache 2.0 License - see [LICENSE](LICENSE) file.
 
 ---
 
-**🍎 Optimized for Apple Silicon • 🐍 Pure Python • 🚀 Production Ready**
+**Optimized for Apple Silicon • Pure Python • Production Ready**
 
-*Start with `python test_mamba2.py` and explore from there!* ⬆️
+*Start with `python -m examples.01_demo` and explore from there!* ⬆️

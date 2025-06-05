@@ -1,4 +1,4 @@
-.PHONY: install test test-unit test-integration clean download-models run-mamba1 run-mamba2 format
+.PHONY: install test test-unit test-integration test-quick clean download-models run-mamba1 run-mamba2 format show-structure help
 
 # Default Python command
 PYTHON := python
@@ -29,7 +29,7 @@ run-mamba1:
 	$(PYTHON) -m scripts.run_models mamba1 --prompt "The future of AI"
 
 run-mamba2:
-	$(PYTHON) -m scripts.run_models mamba2 --prompt "Hello world"
+	$(PYTHON) -m scripts.run_models mamba2 --prompt "The future of AI"
 
 # Development
 clean:

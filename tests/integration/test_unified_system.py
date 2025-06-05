@@ -12,6 +12,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent / "src"))
 sys.path.append(str(Path(__file__).parent.parent.parent / "scripts"))
 
 from download_models import download_model
+
 from mamba_macos import (generate_text_with_model, get_device,
                          load_and_prepare_model)
 
@@ -170,7 +171,7 @@ def run_quick_test(model_dir):
         success, model, tokenizer = load_and_prepare_model(model_type, model_dir, device)
         
         if success:
-            generated = generate_text_with_model(model, tokenizer, "Hello world", device, max_length=20, temperature=0.7)
+            generated = generate_text_with_model(model, tokenizer, "The future of AI", device, max_length=20, temperature=0.7)
             print(f"✅ {model_type}: '{generated[:50]}...'")
         else:
             print(f"❌ {model_type} not available")

@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """
-Perfect Structure Demo - Showcasing the new organized codebase
+Mamba Demo - Production Model Text Generation
 
-This example demonstrates how to use the reorganized Mamba SSM macOS codebase
-with clean imports and the new directory structure.
+This example demonstrates text generation using downloaded Mamba1 and Mamba2 models.
 
 Features:
-- Uses the new src/mamba_macos package structure
-- Demonstrates both Mamba1 and Mamba2 models
-- Shows proper error handling and device selection
-- Interactive and automated modes
+- Uses production Mamba models (130M parameters each)
+- Supports both Mamba1 and Mamba2 architectures
+- Interactive and automated generation modes
+- Shows proper device selection and error handling
 """
 
 import argparse
@@ -128,8 +127,8 @@ def interactive_mode():
 
 
 def showcase_structure():
-    """Show the perfect directory structure."""
-    print("\n🏗️ Perfect Directory Structure")
+    """Show the organized directory structure."""
+    print("\n🏗️ Organized Directory Structure")
     print("=" * 50)
     
     structure_info = [
@@ -155,16 +154,16 @@ def showcase_structure():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Perfect Structure Demo")
+    parser = argparse.ArgumentParser(description="Mamba Production Demo")
     parser.add_argument("--interactive", action="store_true", help="Interactive mode")
     parser.add_argument("--model", choices=["mamba1", "mamba2", "both"], default="both", help="Model to test")
     parser.add_argument("--show-structure", action="store_true", help="Show directory structure")
     
     args = parser.parse_args()
     
-    print("🎉 Perfect Structure Demo")
+    print("🎉 Mamba Production Demo")
     print("=" * 50)
-    print("Showcasing the reorganized Mamba SSM macOS codebase")
+    print("Text generation with production Mamba models")
     
     if args.show_structure:
         showcase_structure()
@@ -208,9 +207,9 @@ def main():
     print("=" * 50)
     print(f"✅ Successfully tested {success_count}/{len(models_to_test)} models")
     print("📋 Try these commands:")
-    print("  python -m examples.09_perfect_structure_demo --interactive")
-    print("  python -m examples.09_perfect_structure_demo --show-structure")
-    print("  python -m examples.09_perfect_structure_demo --model mamba1")
+    print("  python -m examples.01_demo --interactive")
+    print("  python -m examples.01_demo --show-structure")
+    print("  python -m examples.01_demo --model mamba1")
     print("\n🛠️ Development commands:")
     print("  make test-quick    # Quick integration test")
     print("  make run-mamba1    # Run Mamba1 demo")

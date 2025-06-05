@@ -59,17 +59,6 @@ def create_fallback_model(config, device):
         
         def forward(self, input_ids, **kwargs):
             return type('Output', (), {'logits': self.lm_head(self.backbone(input_ids, **kwargs))})()
-        
-        def generate(self, input_ids, max_length=50, temperature=0.8, **kwargs):
-            self.eval()
-            with torch.no_grad():
-                generated = input_ids.clone()
-                for _ in range(max_length - input_ids.shape[1]):
-                    outputs = self.forward(generated)
-                    logits = outputs.logits[:, -1, :] / temperature
-                    next_token = torch.multinomial(torch.softmax(logits, dim=-1), num_samples=1) if temperature > 0 else torch.argmax(logits, dim=-1, keepdim=True)
-                    generated = torch.cat([generated, next_token], dim=1)
-            return generated
     
     return SimpleMambaLM(config, device=device, dtype=torch.float32)
 
@@ -90,17 +79,16 @@ def load_model_weights(model, weight_paths):
 def generate_text_with_model(model, tokenizer, prompt, device, max_length, temperature):
     input_ids = tokenizer.encode(prompt, return_tensors="pt").to(device)
     
-    try:
-        output = model.generate(input_ids, max_length=max_length, temperature=temperature, 
-                              do_sample=True, pad_token_id=tokenizer.eos_token_id, eos_token_id=tokenizer.eos_token_id)
-    except:
-        with torch.no_grad():
-            generated = input_ids.clone()
-            for _ in range(max_length - input_ids.shape[1]):
-                outputs = model(generated)
-                logits = outputs.logits[:, -1, :] / temperature
-                next_token = torch.multinomial(torch.softmax(logits, dim=-1), num_samples=1) if temperature > 0 else torch.argmax(logits, dim=-1, keepdim=True)
-                generated = torch.cat([generated, next_token], dim=1)
-            output = generated
+    with torch.no_grad():
+        generated = input_ids.clone()
+        for _ in range(max_length - input_ids.shape[1]):
+            outputs = model(generated)
+            logits = outputs.logits[:, -1, :]
+            if temperature > 0:
+                logits = logits / temperature
+                next_token = torch.multinomial(torch.softmax(logits, dim=-1), num_samples=1)
+            else:
+                next_token = torch.argmax(logits, dim=-1, keepdim=True)
+            generated = torch.cat([generated, next_token], dim=1)
     
-    return tokenizer.decode(output[0], skip_special_tokens=True) 
+    return tokenizer.decode(generated[0], skip_special_tokens=True) 
