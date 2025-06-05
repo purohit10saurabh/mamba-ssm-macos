@@ -2,9 +2,12 @@
 from typing import Optional
 
 import torch
-from torch import nn, Tensor
+from torch import Tensor, nn
 
-from mamba_ssm.ops.triton.layer_norm import RMSNorm, layer_norm_fn
+try:
+    from mamba_ssm.ops.triton.layer_norm import RMSNorm, layer_norm_fn
+except ImportError:
+    RMSNorm, layer_norm_fn = None, None
 
 
 class Block(nn.Module):
@@ -34,7 +37,8 @@ class Block(nn.Module):
         else:
             self.mlp = None
         if self.fused_add_norm:
-            assert RMSNorm is not None, "RMSNorm import fails"
+            if RMSNorm is None:
+                raise ImportError("RMSNorm not available - triton not installed. Set fused_add_norm=False")
             assert isinstance(
                 self.norm, (nn.LayerNorm, RMSNorm)
             ), "Only LayerNorm and RMSNorm are supported for fused_add_norm"
@@ -54,6 +58,8 @@ class Block(nn.Module):
             if self.residual_in_fp32:
                 residual = residual.to(torch.float32)
         else:
+            if layer_norm_fn is None:
+                raise RuntimeError("Fused layer norm not available - triton not installed")
             hidden_states, residual = layer_norm_fn(
                 hidden_states,
                 self.norm.weight,
@@ -73,6 +79,8 @@ class Block(nn.Module):
                 if self.residual_in_fp32:
                     residual = residual.to(torch.float32)
             else:
+                if layer_norm_fn is None:
+                    raise RuntimeError("Fused layer norm not available - triton not installed")
                 hidden_states, residual = layer_norm_fn(
                     hidden_states,
                     self.norm2.weight,

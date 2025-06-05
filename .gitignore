@@ -9,3 +9,4 @@ build/
 !/README.md
 .vscode/
 models/
+.pytest_cache/

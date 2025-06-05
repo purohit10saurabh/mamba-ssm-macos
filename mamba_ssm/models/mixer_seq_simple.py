@@ -1,27 +1,27 @@
 # Copyright (c) 2023, Albert Gu, Tri Dao.
 
-import math
-from functools import partial
-import json
-import os
 import copy
-
+import json
+import math
+import os
 from collections import namedtuple
+from functools import partial
 
 import torch
 import torch.nn as nn
 
 from mamba_ssm.models.config_mamba import MambaConfig
-from mamba_ssm.modules.mamba_simple import Mamba
+from mamba_ssm.modules.block import Block
 from mamba_ssm.modules.mamba2 import Mamba2
+from mamba_ssm.modules.mamba_simple import Mamba
 from mamba_ssm.modules.mha import MHA
 from mamba_ssm.modules.mlp import GatedMLP
-from mamba_ssm.modules.block import Block
 from mamba_ssm.utils.generation import GenerationMixin
 from mamba_ssm.utils.hf import load_config_hf, load_state_dict_hf
 
 try:
-    from mamba_ssm.ops.triton.layer_norm import RMSNorm, layer_norm_fn, rms_norm_fn
+    from mamba_ssm.ops.triton.layer_norm import (RMSNorm, layer_norm_fn,
+                                                 rms_norm_fn)
 except ImportError:
     RMSNorm, layer_norm_fn, rms_norm_fn = None, None, None
 
@@ -61,9 +61,11 @@ def create_block(
         )
     else:
         mixer_cls = partial(MHA, layer_idx=layer_idx, **attn_cfg, **factory_kwargs)
-    norm_cls = partial(
-        nn.LayerNorm if not rms_norm else RMSNorm, eps=norm_epsilon, **factory_kwargs
-    )
+    if rms_norm and RMSNorm is not None:
+        norm_cls = partial(RMSNorm, eps=norm_epsilon, **factory_kwargs)
+    else:
+        # Fall back to LayerNorm if RMSNorm is not available or not requested
+        norm_cls = partial(nn.LayerNorm, eps=norm_epsilon, **factory_kwargs)
     if d_intermediate == 0:
         mlp_cls = nn.Identity
     else:
@@ -168,9 +170,11 @@ class MixerModel(nn.Module):
             ]
         )
 
-        self.norm_f = (nn.LayerNorm if not rms_norm else RMSNorm)(
-            d_model, eps=norm_epsilon, **factory_kwargs
-        )
+        if rms_norm and RMSNorm is not None:
+            self.norm_f = RMSNorm(d_model, eps=norm_epsilon, **factory_kwargs)
+        else:
+            # Fall back to LayerNorm if RMSNorm is not available or not requested
+            self.norm_f = nn.LayerNorm(d_model, eps=norm_epsilon, **factory_kwargs)
 
         self.apply(
             partial(

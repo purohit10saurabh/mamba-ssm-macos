@@ -61,8 +61,14 @@ from huggingface_hub import PyTorchModelHubMixin
 from mamba_ssm.distributed.distributed_utils import all_reduce, reduce_scatter
 from mamba_ssm.distributed.tensor_parallel import (ColumnParallelLinear,
                                                    RowParallelLinear)
-from mamba_ssm.ops.triton.ssd_combined import (
-    mamba_chunk_scan_combined, mamba_split_conv1d_scan_combined)
+
+try:
+    from mamba_ssm.ops.triton.ssd_combined import (
+        mamba_chunk_scan_combined, mamba_split_conv1d_scan_combined)
+    TRITON_AVAILABLE = True
+except ImportError:
+    mamba_chunk_scan_combined, mamba_split_conv1d_scan_combined = None, None
+    TRITON_AVAILABLE = False
 
 
 class Mamba2(nn.Module, PyTorchModelHubMixin):
@@ -211,7 +217,7 @@ class Mamba2(nn.Module, PyTorchModelHubMixin):
         # If the model is loaded in fp16, without the .float() here, A might be -inf
         A = -torch.exp(self.A_log.float())  # (nheads) or (d_inner, d_state)
         dt_limit_kwargs = {} if self.dt_limit == (0.0, float("inf")) else dict(dt_limit=self.dt_limit)
-        if self.use_mem_eff_path and inference_params is None:
+        if self.use_mem_eff_path and inference_params is None and TRITON_AVAILABLE and mamba_split_conv1d_scan_combined is not None:
             out = mamba_split_conv1d_scan_combined(
                 zxbcdt,
                 rearrange(self.conv1d.weight, "d 1 w -> d w"),
