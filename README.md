@@ -140,10 +140,8 @@ if success:
 
 ### Learning Examples
 ```bash
-# Start with basics
-python -m examples.02_basic_usage          # Forward pass demo
-python -m examples.03_understanding_ssm    # Learn SSM concepts  
-python -m examples.01_text_generation      # Advanced generation
+python -m examples.01_demo      # Interactive demo
+python -m examples.02_basic     # Basic API usage
 ```
 
 ## Performance
@@ -157,9 +155,8 @@ python -m examples.01_text_generation      # Advanced generation
 
 ### Benchmark Results
 ```bash
-# Run performance tests
-python examples/04_performance_analysis.py
-python -m examples.08_mamba2_demo --max-tokens 100
+# Test performance
+make test-quick
 ```
 
 **Mamba 2 Advantages:**
@@ -336,40 +333,25 @@ These are expected - we use optimized PyTorch fallbacks.
 
 ## Learning Path
 
-### Beginners (Start Here)
+### Start Here (3 Steps)
 ```bash
-# 1. Production demo
-python -m examples.01_demo
+# 1. Download models
+make download-models
 
-# 2. Basic usage  
+# 2. Test basic functionality  
+make run-mamba1
+
+# 3. Explore interactively
+python -m examples.01_demo
+```
+
+### Build Something
+```bash
+# Use Python API
 python -m examples.02_basic
 
-# 3. Read the examples guide
-cat examples/README.md
-```
-
-### Intermediate Users
-```bash
-# 1. Learn the concepts
-python -m examples.03_understanding_ssm
-
-# 2. Advanced generation
-python -m examples.01_text_generation --model-size small
-
-# 3. Interactive testing  
-python -m examples.01_demo --interactive
-```
-
-### Advanced Users
-```bash
-# 1. Explore the clean structure
-make show-structure
-
-# 2. Run comprehensive tests
-make test
-
-# 3. Build custom applications
-# Use src/mamba_macos as your import base
+# Custom generation
+python -m scripts.run_models mamba1 --prompt "Your text"
 ```
 
 ## Technical Details
