@@ -8,5 +8,5 @@ build/
 *.md
 !/README.md
 .vscode/
-models/
+models/*
 .pytest_cache/

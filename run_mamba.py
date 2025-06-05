@@ -29,7 +29,7 @@ def load_downloaded_model(model_path, device="mps"):
     logger.info(f"📋 Original config: {config_data}")
     
     if 'ssm_cfg' not in config_data: config_data['ssm_cfg'] = {}
-    config_data['ssm_cfg']['layer'] = 'Mamba1'
+    if 'layer' not in config_data['ssm_cfg']: config_data['ssm_cfg']['layer'] = 'Mamba1'
     config_data['fused_add_norm'] = False
     
     logger.info(f"📋 Modified config: {config_data}")
