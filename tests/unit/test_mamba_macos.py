@@ -96,5 +96,24 @@ class TestMambaMacOS(unittest.TestCase):
         loss.backward()
 
 
+def run_mamba_tests():
+    print("🧪 Running Mamba macOS tests...")
+    
+    try:
+        suite = unittest.TestLoader().loadTestsFromTestCase(TestMambaMacOS)
+        runner = unittest.TextTestRunner(verbosity=2)
+        result = runner.run(suite)
+        
+        if result.wasSuccessful():
+            print("✅ All Mamba macOS tests passed")
+            return True
+        else:
+            print(f"❌ {len(result.failures)} failures, {len(result.errors)} errors")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Test execution error: {e}")
+        return False
+
 if __name__ == "__main__":
-    unittest.main() 
+    run_mamba_tests() 
