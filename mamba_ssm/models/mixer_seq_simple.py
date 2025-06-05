@@ -53,12 +53,23 @@ def create_block(
         ssm_layer = ssm_cfg.pop("layer", "Mamba1")
         if ssm_layer not in ["Mamba1", "Mamba2"]:
             raise ValueError(f"Invalid ssm_layer: {ssm_layer}, only support Mamba1 and Mamba2")
-        mixer_cls = partial(
-            Mamba2 if ssm_layer == "Mamba2" else Mamba,
-            layer_idx=layer_idx,
-            **ssm_cfg,
-            **factory_kwargs
-        )
+        
+        if ssm_layer == "Mamba2":
+            # Use official Mamba2 implementation for compatibility
+            try:
+                from mamba_ssm.modules.mamba2_official import Mamba2Official
+                mixer_cls = partial(Mamba2Official, layer_idx=layer_idx, **ssm_cfg, **factory_kwargs)
+            except ImportError as e:
+                # Fallback to original implementations
+                try:
+                    mixer_cls = partial(Mamba2, layer_idx=layer_idx, **ssm_cfg, **factory_kwargs)
+                except ImportError:
+                    # Final fallback to macOS-compatible Mamba2
+                    from mamba_ssm.modules.mamba2_macos import Mamba2MacOS
+                    print(f"🍎 Falling back to Mamba2MacOS for layer {layer_idx}")
+                    mixer_cls = partial(Mamba2MacOS, layer_idx=layer_idx, **ssm_cfg, **factory_kwargs)
+        else:
+            mixer_cls = partial(Mamba, layer_idx=layer_idx, **ssm_cfg, **factory_kwargs)
     else:
         mixer_cls = partial(MHA, layer_idx=layer_idx, **attn_cfg, **factory_kwargs)
     if rms_norm and RMSNorm is not None:
