@@ -9,30 +9,29 @@
 
 ## 🎯 What Works Out of the Box
 
-✅ **Mamba 1 & 2 Support** - Both architectures with official weights  
-✅ **High-Quality Generation** - Coherent, contextual text output  
+✅ **Mamba 1 & 2 Support** - Inference of both architectures with pretrained models from Hugging Face
+✅ **High-Quality Generation** - Coherent, contextual text generation with high throughput  
 ✅ **Apple Silicon Optimized** - MPS acceleration for M1/M2/M3/M4  
 ✅ **No Dependencies Hell** - Works without CUDA/Triton requirements  
-✅ **Production Ready** - Robust error handling and fallbacks  
+✅ **Production Ready** - Robust error handling and fallbacks for both architectures  
 ✅ **Multiple Interfaces** - CLI, Python API, interactive demos  
 
 ## 🚀 Quick Start (30 seconds)
 
 ```bash
 # 1. Clone and install
-git clone <this-repo>
-cd mamba && pip install -e .
+git clone <this-repository-url>
+cd mamba-ssm-macos
+pip install -r requirements.txt
 
-# 2. Install dependencies  
-pip install torch transformers einops huggingface_hub
+# 2. Download models 
+python -m scripts.download_models mamba1    # Mamba 1 (493MB)
+python -m scripts.download_models mamba2    # Mamba 2 (493MB) 
 
-# 3. Download models (choose one)
-./download_mamba.sh              # Mamba 1 (493MB)
-python download_mamba2_official.py  # Mamba 2 (493MB) 
-
-# 4. Generate text immediately
-python test_mamba2.py            # Mamba 2 examples
-python run_mamba.py --prompt "Hello world"  # Mamba 1
+# 3. Generate text immediately  
+make run-mamba1                              # Quick Mamba 1 demo
+make run-mamba2                              # Quick Mamba 2 demo
+python -m examples.09_perfect_structure_demo # Interactive showcase
 ```
 
 ## 📋 Table of Contents
@@ -70,14 +69,11 @@ python run_mamba.py --prompt "Hello world"  # Mamba 1
 ### Setup
 ```bash
 # Clone repository
-git clone <this-repository>
-cd mamba
+git clone <this-repository-url>
+cd mamba-ssm-macos
 
-# Install package
-pip install -e .
-
-# Install dependencies
-pip install torch torchvision torchaudio transformers einops huggingface_hub
+# Install dependencies (includes PyTorch with MPS support)
+pip install -r requirements.txt
 
 # Verify MPS support
 python -c "import torch; print('MPS Available:', torch.backends.mps.is_available())"
@@ -85,14 +81,15 @@ python -c "import torch; print('MPS Available:', torch.backends.mps.is_available
 
 ### Download Models
 
-#### Mamba 2 (Recommended) 🆕
+#### Both Models (Recommended)
 ```bash
-python download_mamba2_official.py
+make download-models  # Downloads both Mamba 1 & 2
 ```
 
-#### Mamba 1 (Original)
+#### Individual Models
 ```bash
-./download_mamba.sh
+python -m scripts.download_models mamba1  # Mamba 1 (original)
+python -m scripts.download_models mamba2  # Mamba 2 (latest)
 ```
 
 ## 🎮 Usage Examples
@@ -101,61 +98,52 @@ python download_mamba2_official.py
 
 #### Quick Test
 ```bash
-python test_mamba2.py
+python -m examples.09_perfect_structure_demo --interactive  # Try both models
+python -m examples.09_perfect_structure_demo --show-structure  # See organization
 ```
 
-#### Interactive Demo  
+#### Makefile Commands
 ```bash
-python -m examples.08_mamba2_demo --prompt "The future of AI"
+make run-mamba1         # Quick Mamba 1 demo
+make run-mamba2         # Quick Mamba 2 demo  
+make test-quick         # Fast integration test
+make show-structure     # Show directory layout
 ```
 
-#### Python API
-```python
-import json, torch
-from transformers import AutoTokenizer
-from mamba_ssm.models.mixer_seq_simple import MambaLMHeadModel
-from mamba_ssm.models.config_mamba import MambaConfig
+### Command Line Generation
 
-# Load Mamba 2
-config = MambaConfig(**json.load(open("models/mamba2_config.json")))
-model = MambaLMHeadModel(config, device="mps")
-state_dict = torch.load("models/official_mamba2/pytorch_model.bin", map_location="cpu")
-model.load_state_dict(state_dict, strict=False)
-
-# Generate text (simple greedy)
-tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neox-20b")
-tokenizer.pad_token = tokenizer.eos_token
-input_ids = tokenizer("Once upon a time", return_tensors="pt")['input_ids'].to("mps")
-with torch.no_grad():
-    for _ in range(10):
-        outputs = model(input_ids)
-        next_token = torch.argmax(outputs.logits[:, -1, :], keepdim=True)
-        input_ids = torch.cat([input_ids, next_token], dim=1)
-print(tokenizer.decode(input_ids[0]))
-```
-
-### Mamba 1 (Original)
-
-#### Command Line
+#### Mamba 1 & 2 via Scripts
 ```bash
 # Basic generation
-python run_mamba.py --prompt "Hello world" --max-length 50
+python -m scripts.run_models mamba1 --prompt "Hello world" --max-length 50
+python -m scripts.run_models mamba2 --prompt "The future of AI" --max-length 30
 
-# Creative writing
-python run_mamba.py --prompt "Once upon a time" --temperature 0.8
-
-# Technical content  
-python run_mamba.py --prompt "Python is" --max-length 100
+# Custom parameters
+python -m scripts.run_models mamba1 --prompt "Once upon a time" --temperature 0.8
 ```
 
-#### Interactive Demo
-```bash
-python examples/07_downloaded_model_demo.py --interactive
+### Python API (Clean Imports)
+```python
+# New organized import structure
+from mamba_macos import get_device, load_and_prepare_model, generate_text_with_model
+
+# Load any model
+device = get_device()  # Automatically detects MPS/CPU
+success, model, tokenizer = load_and_prepare_model("mamba1", "./models", device)
+
+if success:
+    text = generate_text_with_model(
+        model, tokenizer, "Hello world", device, max_length=50, temperature=0.7
+    )
+    print(text)
 ```
 
-### Architecture Comparison
+### Learning Examples
 ```bash
-python demo_both_architectures.py
+# Start with basics
+python -m examples.02_basic_usage          # Forward pass demo
+python -m examples.03_understanding_ssm    # Learn SSM concepts  
+python -m examples.01_text_generation      # Advanced generation
 ```
 
 ## 📊 Performance
@@ -202,43 +190,53 @@ python -m examples.08_mamba2_demo --max-tokens 100
     much respected among wolves. She resided at a rendezvous called Buguqrach..."
 ```
 
-## 📁 Repository Structure
+## 📁 Perfect Directory Structure
 
 ```
-mamba/
-├── 🎯 test_mamba2.py                 # Quick Mamba 2 test (START HERE)
-├── 🎯 run_mamba.py                   # Mamba 1 main script  
-├── 📥 download_mamba2_official.py    # Download Mamba 2 model
-├── 📥 download_mamba.sh              # Download Mamba 1 model
+mamba-ssm-macos/
+├── 📦 src/mamba_macos/               # 🆕 Core library (clean imports)
+│   ├── __init__.py                   # Package exports & version  
+│   ├── utils.py                      # Device, tokenizer, generation
+│   └── models.py                     # Model loading & preparation
 │
-├── examples/                         # 📚 Learning examples
-│   ├── 08_mamba2_demo.py            # 🆕 Interactive Mamba 2 demo
-│   ├── 07_downloaded_model_demo.py   # Mamba 1 interactive demo
-│   ├── 01_text_generation.py        # Basic text generation
+├── 🔧 scripts/                       # 🆕 Utility scripts
+│   ├── download_models.py            # Download both models
+│   └── run_models.py                 # Run models with arguments
+│
+├── 🧪 tests/                         # 🆕 Organized test suite  
+│   ├── unit/                         # Component-level tests
+│   │   ├── test_mamba_macos.py       # Mamba 1 unit tests
+│   │   ├── test_mamba2_macos.py      # Mamba 2 unit tests
+│   │   └── test_generation_macos.py  # Generation tests
+│   └── integration/                  # End-to-end tests
+│       └── test_unified_system.py    # Complete workflow tests
+│
+├── 📚 examples/                      # 🆕 Curated examples
+│   ├── 09_perfect_structure_demo.py  # 🎯 START HERE - Showcase demo
+│   ├── 02_basic_usage.py             # Basic forward pass
+│   ├── 03_understanding_ssm.py       # Learn SSM concepts
+│   ├── 01_text_generation.py         # Advanced generation
 │   └── README.md                     # Examples guide
 │
-├── tests/                            # 🧪 Test suite
-│   ├── test_mamba2_macos.py         # Mamba 2 tests
-│   └── test_downloaded_model.py      # Mamba 1 tests
+├── ⚙️ config/                        # 🆕 Configuration files
+│   ├── pyproject.toml                # Python project config
+│   └── setup.py                      # Package setup
 │
-├── models/                           # 📁 Downloaded models
-│   ├── official_mamba2/             # 🆕 Mamba 2 official weights
-│   ├── mamba2_config.json           # 🆕 Mamba 2 config (auto-created from official + Apple Silicon fixes)
-│   ├── mamba-130m-model.bin         # Mamba 1 weights
-│   └── mamba-130m-config.json       # Mamba 1 configuration
+├── 🛠️ tools/                         # 🆕 Development tools
+│   └── run_all_tests.py              # Test runner
 │
-├── mamba_ssm/                        # 🔧 Core implementation
-│   ├── models/
-│   │   ├── mixer_seq_simple.py      # Model wrapper (both)
-│   │   └── config_mamba.py          # Configuration classes
-│   └── modules/
-│       ├── mamba2_official.py       # 🆕 Mamba 2 SSD implementation
-│       ├── mamba_simple.py          # Mamba 1 SSM implementation
-│       └── block.py                 # Shared building blocks
+├── 🤖 models/                        # Downloaded models
+│   ├── mamba1/                       # Mamba 1 files
+│   └── mamba2/                       # Mamba 2 files
 │
-├── 📖 README.md                      # This file
-├── 📖 mamba2.md                      # 🆕 Mamba 2 user guide
-└── 📖 CLEANUP_COMPACT.md             # Code cleanup summary
+├── mamba_ssm/                        # Core implementation
+│   ├── models/ & modules/            # Model architectures
+│   └── ...                           # (Unchanged)
+│
+├── 📋 Makefile                       # 🆕 Development commands
+├── 📋 requirements.txt               # 🆕 Dependencies
+├── 📋 PROJECT_STRUCTURE.md           # 🆕 Structure documentation
+└── 📖 README.md                      # This file
 ```
 
 ## 🔧 Advanced Usage
@@ -296,9 +294,10 @@ for batch in dataloader:
 
 #### ❌ "Model files not found"
 ```bash
-# Download the models first
-python download_mamba2_official.py  # For Mamba 2
-./download_mamba.sh                 # For Mamba 1
+# Download models using new structure
+make download-models                         # Both models
+python -m scripts.download_models mamba1    # Mamba 1 only
+python -m scripts.download_models mamba2    # Mamba 2 only
 ```
 
 #### ❌ "MPS not available"
@@ -311,11 +310,11 @@ python -c "import torch; print(torch.backends.mps.is_available())"
 
 #### ❌ Import errors
 ```bash
-# Run as module
-python -m examples.08_mamba2_demo
+# Use new module structure
+python -m examples.09_perfect_structure_demo
 
-# Or install in development mode
-pip install -e .
+# Or run with clean imports
+from mamba_macos import get_device, load_and_prepare_model
 ```
 
 #### ❌ Slow generation
@@ -332,20 +331,21 @@ UserWarning: Triton is not available
 These are expected - we use optimized PyTorch fallbacks.
 
 ### Getting Help
-1. 📖 **Read the docs**: Check `mamba2.md` for detailed guide
-2. 🧪 **Run tests**: `python test_mamba2.py` 
-3. 🔍 **Check examples**: Browse `examples/` directory
+1. 📖 **Read the docs**: Check `PROJECT_STRUCTURE.md` for organization details
+2. 🧪 **Run tests**: `make test-quick` or `make test` 
+3. 🔍 **Check examples**: `python -m examples.09_perfect_structure_demo --show-structure`
 4. 🐛 **Report issues**: Create GitHub issue with error details
 
 ## 🎓 Learning Path
 
 ### Beginners (Start Here)
 ```bash
-# 1. Test basic functionality
-python test_mamba2.py
+# 1. Perfect structure showcase
+python -m examples.09_perfect_structure_demo
 
-# 2. Try interactive demo
-python -m examples.08_mamba2_demo
+# 2. Quick demos
+make run-mamba1
+make run-mamba2
 
 # 3. Read the examples guide
 cat examples/README.md
@@ -353,26 +353,26 @@ cat examples/README.md
 
 ### Intermediate Users
 ```bash
-# 1. Compare architectures
-python demo_both_architectures.py
+# 1. Learn the concepts
+python -m examples.03_understanding_ssm
 
-# 2. Run performance analysis
-python examples/04_performance_analysis.py
+# 2. Advanced generation
+python -m examples.01_text_generation --model-size small
 
-# 3. Try custom prompts
-python run_mamba.py --prompt "Your custom prompt"
+# 3. Interactive testing  
+python -m examples.09_perfect_structure_demo --interactive
 ```
 
 ### Advanced Users
 ```bash
-# 1. Explore the implementation
-ls mamba_ssm/modules/
+# 1. Explore the clean structure
+make show-structure
 
 # 2. Run comprehensive tests
-python tests/test_mamba2_macos.py
+make test
 
 # 3. Build custom applications
-# See examples/ for templates
+# Use src/mamba_macos as your import base
 ```
 
 ## 🔬 Technical Details
@@ -456,8 +456,8 @@ We welcome contributions! Areas for improvement:
 
 ### Development Setup
 ```bash
-git clone <this-repo>
-cd mamba
+git clone <this-repository-url>
+cd mamba-ssm-macos
 pip install -e ".[dev]"
 pytest tests/
 ```
@@ -465,13 +465,6 @@ pytest tests/
 ## 📜 License
 
 Apache 2.0 License - see [LICENSE](LICENSE) file.
-
-## 📚 References with links
-
-- **Tri Dao & Albert Gu** - Original Mamba architecture ([arXiv:2312.00752](https://arxiv.org/abs/2312.00752), [arXiv:2405.21060](https://arxiv.org/abs/2405.21060))
-- **Mamba official code** - Official Mamba implementations ([mamba](https://github.com/state-spaces/mamba), [mamba2-130m](https://huggingface.co/state-spaces/mamba2-130m))
-- **Apple** - Apple Silicon MPS support ([PyTorch MPS Guide](https://pytorch.org/docs/stable/notes/mps.html))
-- **Hugging Face** - Model hosting and tokenizers ([EleutherAI/gpt-neox-20b](https://huggingface.co/EleutherAI/gpt-neox-20b))
 
 ---
 

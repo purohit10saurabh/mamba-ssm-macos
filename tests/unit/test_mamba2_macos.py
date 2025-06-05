@@ -7,63 +7,24 @@ from mamba_ssm.modules.mamba2_macos import Mamba2MacOS
 
 
 class TestMamba2MacOS(unittest.TestCase):
-    """Tests for the macOS-compatible Mamba2 implementation."""
-    
     def test_basic_forward(self):
-        """Test basic forward pass of Mamba2MacOS."""
-        # Model parameters
-        d_model = 64
-        d_state = 16
-        batch_size = 2
-        seq_len = 8
+        d_model, d_state, batch_size, seq_len = 64, 16, 2, 8
         
-        # Create model
-        model = Mamba2MacOS(
-            d_model=d_model,
-            d_state=d_state,
-            d_conv=4,
-            expand=2
-        )
-        
-        # Create input
+        model = Mamba2MacOS(d_model=d_model, d_state=d_state, d_conv=4, expand=2)
         x = torch.randn(batch_size, seq_len, d_model)
-        
-        # Forward pass
         out = model(x)
-        
-        # Check output shape
         self.assertEqual(out.shape, (batch_size, seq_len, d_model))
     
     def test_shape_consistency_large_model(self):
-        """Test shape consistency with larger model dimensions."""
-        # Model parameters for larger configurations
-        d_model = 256
-        d_state = 64
-        headdim = 64
-        batch_size = 2
-        seq_len = 32
+        d_model, d_state, headdim, batch_size, seq_len = 256, 64, 64, 2, 32
         
-        # Create model with larger configuration
-        model = Mamba2MacOS(
-            d_model=d_model,
-            d_state=d_state,
-            headdim=headdim,
-            d_conv=4,
-            expand=2
-        )
-        
-        # Create input
+        model = Mamba2MacOS(d_model=d_model, d_state=d_state, headdim=headdim, d_conv=4, expand=2)
         x = torch.randn(batch_size, seq_len, d_model)
-        
-        # Forward pass
         out = model(x)
         
-        # Check output shape
         self.assertEqual(out.shape, (batch_size, seq_len, d_model))
-        
-        # Verify internal dimensions
-        self.assertEqual(model.d_inner, 512)  # expand * d_model
-        self.assertEqual(model.nheads, 8)     # d_inner // headdim
+        self.assertEqual(model.d_inner, 512)
+        self.assertEqual(model.nheads, 8)
         self.assertEqual(model.headdim, 64)
     
     def test_tensor_shape_flow(self):
@@ -347,20 +308,24 @@ class TestMamba2MacOS(unittest.TestCase):
                 self.assertEqual(out.shape, (batch_size, seq_len, config["d_model"]))
 
 
-if __name__ == '__main__':
-    # Remove debug logging for tests
-    import io
-    import sys
-
-    # Capture stdout to hide debug prints during tests
-    old_stdout = sys.stdout
-    sys.stdout = buffer = io.StringIO()
+def run_mamba2_tests():
+    print("🧪 Running Mamba2 macOS tests...")
     
     try:
-        unittest.main(verbosity=2)
-    finally:
-        sys.stdout = old_stdout
-        # Print any important output
-        output = buffer.getvalue()
-        if "FAILED" in output or "ERROR" in output:
-            print(output) 
+        suite = unittest.TestLoader().loadTestsFromTestCase(TestMamba2MacOS)
+        runner = unittest.TextTestRunner(verbosity=2)
+        result = runner.run(suite)
+        
+        if result.wasSuccessful():
+            print("✅ All Mamba2 macOS tests passed")
+            return True
+        else:
+            print(f"❌ {len(result.failures)} failures, {len(result.errors)} errors")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Test execution error: {e}")
+        return False
+
+if __name__ == "__main__":
+    run_mamba2_tests() 

@@ -78,12 +78,8 @@ class TestGenerationMacOS(unittest.TestCase):
     
     def test_generation(self):
         """Test basic generation functionality on macOS."""
-        batch = 2
-        seqlen = 10
-        device = "cpu"  # Use CPU on macOS instead of CUDA
-        dtype = torch.float32  # Use float32 instead of float16 for better compatibility
+        batch, seqlen, device, dtype = 2, 10, "cpu", torch.float32
 
-        # Create our simpler model that doesn't depend on Triton/Mamba2
         torch.manual_seed(2357)
         model = SimpleMambaLMHeadModel(
             d_model=128,
@@ -115,10 +111,7 @@ class TestGenerationMacOS(unittest.TestCase):
         # without the full varlen machinery that might depend on CUDA optimizations
         seqlens = [8, 6, 7]
         batch_size = len(seqlens)
-        vocab_size = 1000
-        max_seqlen = max(seqlens)
-        device = "cpu"  # Use CPU on macOS instead of CUDA
-        dtype = torch.float32
+        vocab_size, max_seqlen, device, dtype = 1000, max(seqlens), "cpu", torch.float32
 
         # Create our simpler model
         torch.manual_seed(2357)
@@ -172,5 +165,24 @@ class TestGenerationMacOS(unittest.TestCase):
         print("Variable length generation test passed")
 
 
+def run_generation_tests():
+    print("🧪 Running Generation macOS tests...")
+    
+    try:
+        suite = unittest.TestLoader().loadTestsFromTestCase(TestGenerationMacOS)
+        runner = unittest.TextTestRunner(verbosity=2)
+        result = runner.run(suite)
+        
+        if result.wasSuccessful():
+            print("✅ All Generation macOS tests passed")
+            return True
+        else:
+            print(f"❌ {len(result.failures)} failures, {len(result.errors)} errors")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Test execution error: {e}")
+        return False
+
 if __name__ == "__main__":
-    unittest.main() 
+    run_generation_tests() 

@@ -1,0 +1,18 @@
+# Core dependencies
+torch>=2.0.0
+transformers>=4.30.0
+numpy>=1.21.0
+einops>=0.7.0
+
+# Hugging Face Hub for model downloads
+huggingface-hub>=0.16.0
+
+# Development dependencies
+pytest>=7.0.0
+black>=23.0.0
+isort>=5.12.0
+
+# Optional: For better performance on Apple Silicon
+# These are automatically detected by PyTorch on macOS
+# torch-audio (optional)
+# torch-vision (optional) 
