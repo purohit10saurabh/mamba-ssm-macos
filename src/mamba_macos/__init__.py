@@ -13,7 +13,7 @@ from .utils import create_tokenizer, generate_text_with_model, get_device
 
 __all__ = [
     "get_device",
-    "create_tokenizer", 
+    "create_tokenizer",
     "generate_text_with_model",
     "load_and_prepare_model",
-] 
+]
