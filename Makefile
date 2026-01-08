@@ -1,18 +1,18 @@
-.PHONY: install test test-unit test-integration test-quick clean download-models run-mamba1 run-mamba2 format show-structure help
+.PHONY: install install-dev test test-unit test-integration test-quick clean download-models run-mamba1 run-mamba2 format show-structure help
 
 # Default Python command
-PYTHON := python
+PYTHON := uv run python
 
 # Installation
 install:
-	pip install -r requirements.txt
-	pip install -e .
+	uv sync
+	uv pip install -e .
 
 # Testing
 test: test-unit test-integration
 
 test-unit:
-	$(PYTHON) -m tools.run_all_tests
+	$(PYTHON) -m tests.run_all_tests
 
 test-integration:
 	$(PYTHON) -m tests.integration.test_unified_system
@@ -31,6 +31,9 @@ run-mamba1:
 run-mamba2:
 	$(PYTHON) -m scripts.run_models mamba2 --prompt "The future of AI"
 
+install-dev:
+	uv sync --extra dev
+
 # Development
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
@@ -38,8 +41,8 @@ clean:
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
 
 format:
-	black src/ scripts/ tests/ tools/
-	isort src/ scripts/ tests/ tools/
+	uv run black src/ scripts/ tests/
+	uv run isort src/ scripts/ tests/
 
 # Documentation
 show-structure:
@@ -50,7 +53,6 @@ show-structure:
 	@echo "tests/integration/   - Integration tests"
 	@echo "examples/            - Usage examples"
 	@echo "config/              - Configuration files"
-	@echo "tools/               - Development tools"
 	@echo "models/              - Downloaded models"
 
 help:
