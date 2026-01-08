@@ -199,8 +199,7 @@ mamba-ssm-macos/
 │   └── 02_basic.py                   # Basic forward pass
 │
 ├── ⚙️ config/                        # Configuration files
-│   ├── pyproject.toml                # Python project config
-│   └── setup.py                      # Package setup
+│   └── pyproject.toml                # Python project config
 │
 ├── mamba_ssm/                        # Core implementation
 │   ├── models/                       # Model architectures
