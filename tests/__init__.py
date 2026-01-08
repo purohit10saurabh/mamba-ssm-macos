@@ -1,1 +1,1 @@
-"""Test suite for Mamba SSM macOS implementation.""" 
+"""Test suite for Mamba SSM macOS implementation."""
