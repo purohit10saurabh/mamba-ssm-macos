@@ -4,12 +4,11 @@
 """
 
 import math
+
 import torch
 import torch.nn.functional as F
-
 import triton
 import triton.language as tl
-
 from einops import rearrange, repeat
 
 from mamba_ssm.ops.triton.softplus import softplus
@@ -69,8 +68,6 @@ def _chunk_cumsum_fwd_kernel(
         dt += dt_bias[:, None]
     if DT_SOFTPLUS:
         dt = tl.where(dt <= 20.0, softplus(dt), dt)
-    # As of Triton 2.2.0, tl.clamp is not available yet
-    # dt = tl.clamp(dt, dt_min, dt_max)
     dt = tl.minimum(tl.maximum(dt, dt_min), dt_max)
     dt = tl.where((offs_h[:, None] < nheads) & (offs_c[None, :] < chunk_size_limit), dt, 0.0)
     tl.store(dt_out_ptrs, dt, mask=(offs_h[:, None] < nheads) & (offs_c[None, :] < chunk_size))

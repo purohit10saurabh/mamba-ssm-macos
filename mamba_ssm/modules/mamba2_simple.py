@@ -1,10 +1,10 @@
 # Copyright (c) 2024, Tri Dao, Albert Gu.
 
 import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from einops import rearrange, repeat
 
 try:
@@ -13,12 +13,13 @@ except ImportError:
     causal_conv1d_fn = None
 
 try:
-    from mamba_ssm.ops.triton.layernorm_gated import RMSNorm as RMSNormGated, LayerNorm
+    from mamba_ssm.ops.triton.layernorm_gated import LayerNorm
+    from mamba_ssm.ops.triton.layernorm_gated import RMSNorm as RMSNormGated
 except ImportError:
     RMSNormGated, LayerNorm = None, None
 
-from mamba_ssm.ops.triton.ssd_combined import mamba_chunk_scan_combined
-from mamba_ssm.ops.triton.ssd_combined import mamba_split_conv1d_scan_combined
+from mamba_ssm.ops.triton.ssd_combined import (
+    mamba_chunk_scan_combined, mamba_split_conv1d_scan_combined)
 
 
 class Mamba2Simple(nn.Module):
@@ -82,7 +83,6 @@ class Mamba2Simple(nn.Module):
         )
         if self.conv_init is not None:
             nn.init.uniform_(self.conv1d.weight, -self.conv_init, self.conv_init)
-        # self.conv1d.weight._no_weight_decay = True
 
         if self.learnable_init_states:
             self.init_states = nn.Parameter(torch.zeros(self.nheads, self.headdim, self.d_state, **factory_kwargs))
@@ -99,8 +99,6 @@ class Mamba2Simple(nn.Module):
         # Inverse of softplus: https://github.com/pytorch/pytorch/issues/72759
         inv_dt = dt + torch.log(-torch.expm1(-dt))
         self.dt_bias = nn.Parameter(inv_dt)
-        # Just to be explicit. Without this we already don't put wd on dt_bias because of the check
-        # name.endswith("bias") in param_grouping.py
         self.dt_bias._no_weight_decay = True
 
         # A parameter
@@ -108,7 +106,6 @@ class Mamba2Simple(nn.Module):
         A = torch.empty(self.nheads, dtype=torch.float32, device=device).uniform_(*A_init_range)
         A_log = torch.log(A).to(dtype=dtype)
         self.A_log = nn.Parameter(A_log)
-        # self.register_buffer("A_log", torch.zeros(self.nheads, dtype=torch.float32, device=device), persistent=True)
         self.A_log._no_weight_decay = True
 
         # D "skip" parameter
