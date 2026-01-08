@@ -139,7 +139,6 @@ def showcase_structure():
         ("🧪 tests/integration/", "End-to-end integration tests"),
         ("📚 examples/", "Usage examples and demos"),
         ("⚙️ config/", "Configuration files"),
-        ("🛠️ tools/", "Development tools and test runners"),
         ("🤖 models/", "Downloaded model files"),
     ]
 

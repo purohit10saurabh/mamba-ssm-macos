@@ -41,8 +41,8 @@ clean:
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
 
 format:
-	uv run black src/ scripts/ tests/ tools/
-	uv run isort src/ scripts/ tests/ tools/
+	uv run black src/ scripts/ tests/
+	uv run isort src/ scripts/ tests/
 
 # Documentation
 show-structure:
@@ -53,7 +53,6 @@ show-structure:
 	@echo "tests/integration/   - Integration tests"
 	@echo "examples/            - Usage examples"
 	@echo "config/              - Configuration files"
-	@echo "tools/               - Development tools"
 	@echo "models/              - Downloaded models"
 
 help:

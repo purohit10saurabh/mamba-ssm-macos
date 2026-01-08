@@ -25,13 +25,13 @@ cd mamba-ssm-macos
 uv sync
 
 # 2. Download models 
-python -m scripts.download_models mamba1    # Mamba 1 (493MB)
-python -m scripts.download_models mamba2    # Mamba 2 (493MB) 
+uv run python -m scripts.download_models mamba1    # Mamba 1 (493MB)
+uv run python -m scripts.download_models mamba2    # Mamba 2 (493MB) 
 
 # 3. Generate text immediately  
 make run-mamba1                              # Quick Mamba 1 demo
 make run-mamba2                              # Quick Mamba 2 demo
-python -m examples.01_demo # Interactive showcase
+uv run python -m examples.01_demo # Interactive showcase
 ```
 
 ## Table of Contents
@@ -89,8 +89,8 @@ make download-models  # Downloads both Mamba 1 & 2
 
 #### Individual Models
 ```bash
-python -m scripts.download_models mamba1  # Mamba 1 (original)
-python -m scripts.download_models mamba2  # Mamba 2 (latest)
+uv run python -m scripts.download_models mamba1  # Mamba 1 (original)
+uv run python -m scripts.download_models mamba2  # Mamba 2 (latest)
 ```
 
 ## Usage Examples
@@ -99,8 +99,8 @@ python -m scripts.download_models mamba2  # Mamba 2 (latest)
 
 #### Quick Test
 ```bash
-python -m examples.01_demo --interactive  # Try both models
-python -m examples.01_demo --show-structure  # See organization
+uv run python -m examples.01_demo --interactive  # Try both models
+uv run python -m examples.01_demo --show-structure  # See organization
 ```
 
 #### Makefile Commands
@@ -116,17 +116,17 @@ make show-structure     # Show directory layout
 #### Mamba 1 & 2 via Scripts
 ```bash
 # Basic generation
-python -m scripts.run_models mamba1 --prompt "The future of AI" --max-length 50
-python -m scripts.run_models mamba2 --prompt "The future of AI" --max-length 30
+uv run python -m scripts.run_models mamba1 --prompt "The future of AI" --max-length 50
+uv run python -m scripts.run_models mamba2 --prompt "The future of AI" --max-length 30
 
 # Custom parameters
-python -m scripts.run_models mamba1 --prompt "Once upon a time" --temperature 0.8
+uv run python -m scripts.run_models mamba1 --prompt "Once upon a time" --temperature 0.8
 ```
 
 ### Learning Examples
 ```bash
-python -m examples.01_demo      # Interactive demo
-python -m examples.02_basic     # Basic API usage
+uv run python -m examples.01_demo      # Interactive demo
+uv run python -m examples.02_basic     # Basic API usage
 ```
 
 ## Performance
@@ -272,14 +272,14 @@ for batch in dataloader:
 ```bash
 # Download models using new structure
 make download-models                         # Both models
-python -m scripts.download_models mamba1    # Mamba 1 only
-python -m scripts.download_models mamba2    # Mamba 2 only
+uv run python -m scripts.download_models mamba1    # Mamba 1 only
+uv run python -m scripts.download_models mamba2    # Mamba 2 only
 ```
 
 #### ❌ "MPS not available"
 ```bash
 # Check MPS support
-python -c "import torch; print(torch.backends.mps.is_available())"
+uv run python -c "import torch; print(torch.backends.mps.is_available())"
 
 # If false, model will automatically use CPU
 ```
@@ -287,7 +287,7 @@ python -c "import torch; print(torch.backends.mps.is_available())"
 #### ❌ Import errors
 ```bash
 # Use module structure
-python -m examples.01_demo
+uv run python -m examples.01_demo
 ```
 
 #### ❌ Slow generation
@@ -306,7 +306,7 @@ These are expected - we use optimized PyTorch fallbacks.
 ### Getting Help
 1. 📖 **Read the docs**: Check `PROJECT_STRUCTURE.md` for organization details
 2. 🧪 **Run tests**: `make test-quick` or `make test` 
-3. 🔍 **Check examples**: `python -m examples.01_demo --show-structure`
+3. 🔍 **Check examples**: `uv run python -m examples.01_demo --show-structure`
 4. 🐛 **Report issues**: Create GitHub issue with error details
 
 ## Learning Path
@@ -320,16 +320,16 @@ make download-models
 make run-mamba1
 
 # 3. Explore interactively
-python -m examples.01_demo
+uv run python -m examples.01_demo
 ```
 
 ### Build Something
 ```bash
 # Use Python API
-python -m examples.02_basic
+uv run python -m examples.02_basic
 
 # Custom generation
-python -m scripts.run_models mamba1 --prompt "Your text"
+uv run python -m scripts.run_models mamba1 --prompt "Your text"
 ```
 
 ## Technical Details
@@ -444,4 +444,4 @@ Apache 2.0 License - see [LICENSE](LICENSE) file.
 
 **Optimized for Apple Silicon • Pure Python • High-Performance**
 
-*Start with `python -m examples.01_demo` and explore from there!* ⬆️
+*Start with `uv run python -m examples.01_demo` and explore from there!* ⬆️
