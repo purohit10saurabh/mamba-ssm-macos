@@ -10,3 +10,8 @@ build/
 .vscode/
 models/*
 .pytest_cache/
+
+# uv package manager
+.venv/
+.uv/
+.python-version

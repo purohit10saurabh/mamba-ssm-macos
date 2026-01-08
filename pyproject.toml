@@ -2,6 +2,9 @@
 requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.uv]
+managed = true
+
 [project]
 name = "mamba-ssm-macos"
 version = "0.1.0"
@@ -12,7 +15,7 @@ authors = [
   { name = "Tri Dao" },
   { name = "Albert Gu" },
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = { file = "LICENSE" }
 keywords = ["mamba", "apple-silicon", "macos", "mps", "state-space-model", "deep-learning"]
 classifiers = [

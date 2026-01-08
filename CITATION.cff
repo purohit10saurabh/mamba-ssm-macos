@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+type: software
+title: "Mamba for macOS Apple Silicon: Optimized Implementation"
+authors:
+  - family-names: Purohit
+    given-names: Saurabh
+    email: saurabh97purohit@gmail.com
+  - family-names: Dao
+    given-names: Tri
+  - family-names: Gu
+    given-names: Albert
+repository-code: "https://github.com/purohit10saurabh/mamba-ssm-macos"
+url: "https://github.com/purohit10saurabh/mamba-ssm-macos"
+version: 0.1.0
+date-released: 2026-01-08
+license: Apache-2.0
+keywords:
+  - mamba
+  - state-space-models
+  - apple-silicon
+  - macos
+  - mps
+  - deep-learning
+  - language-models
+message: "If you use this software, please cite it using the metadata from this file."

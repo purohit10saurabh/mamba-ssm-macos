@@ -102,7 +102,8 @@ def test_text_generation(model_dir, device):
                 generated = generate_text_with_model(model, tokenizer, prompt, device, max_length=30, temperature=0.7)
                 
                 assert generated is not None and len(generated) > len(prompt) and isinstance(generated, str)
-                print(f"   ✅ '{prompt}' → Generated {len(generated)} chars")
+                print(f"   📝 Input: '{prompt}'")
+                print(f"   ✅ Output: '{generated}'")
             
         except Exception as e:
             print(f"   ❌ {model_type} generation error: {e}")
@@ -122,10 +123,16 @@ def test_parameter_variations(model_dir, device):
     prompt = "Test generation"
     
     try:
+        print(f"📝 Input: '{prompt}'")
         short = generate_text_with_model(model, tokenizer, prompt, device, max_length=20, temperature=0.5)
         long = generate_text_with_model(model, tokenizer, prompt, device, max_length=50, temperature=0.5)
         cold = generate_text_with_model(model, tokenizer, prompt, device, max_length=30, temperature=0.1)
         hot = generate_text_with_model(model, tokenizer, prompt, device, max_length=30, temperature=1.0)
+        
+        print(f"   🔵 Short (max=20): '{short}'")
+        print(f"   🟡 Long (max=50): '{long}'")
+        print(f"   ❄️  Cold (temp=0.1): '{cold}'")
+        print(f"   🔥 Hot (temp=1.0): '{hot}'")
         
         assert len(short) <= len(long) and all(isinstance(text, str) for text in [short, long, cold, hot])
         print("✅ Length and temperature parameters working")
@@ -171,8 +178,10 @@ def run_quick_test(model_dir):
         success, model, tokenizer = load_and_prepare_model(model_type, model_dir, device)
         
         if success:
-            generated = generate_text_with_model(model, tokenizer, "The future of AI", device, max_length=20, temperature=0.7)
-            print(f"✅ {model_type}: '{generated[:50]}...'")
+            prompt = "The future of AI"
+            generated = generate_text_with_model(model, tokenizer, prompt, device, max_length=20, temperature=0.7)
+            print(f"📝 Input: '{prompt}'")
+            print(f"✅ Output: '{generated}'")
         else:
             print(f"❌ {model_type} not available")
     
