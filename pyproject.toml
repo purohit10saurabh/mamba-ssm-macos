@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.uv]
+managed = true
+
+[project]
+name = "mamba-ssm-macos"
+version = "0.1.0"
+description = "Mamba2MacOS - State Space Models optimized for Apple Silicon"
+readme = "README.md"
+authors = [
+  { name = "Saurabh Purohit", email = "saurabh97purohit@gmail.com" },
+  { name = "Tri Dao" },
+  { name = "Albert Gu" },
+]
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+keywords = ["mamba", "apple-silicon", "macos", "mps", "state-space-model", "deep-learning"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: Unix",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+  "torch>=2.0.0",
+  "transformers>=4.30.0",
+  "numpy>=1.21.0",
+  "einops>=0.7.0",
+  "huggingface-hub>=0.16.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.0.0",
+  "black>=23.0.0",
+  "isort>=5.12.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/purohit10saurabh/mamba-ssm-macos"
+Repository = "https://github.com/purohit10saurabh/mamba-ssm-macos"
+
+[tool.setuptools]
+packages = [
+  "mamba_ssm",
+  "mamba_ssm.distributed",
+  "mamba_ssm.models",
+  "mamba_ssm.modules",
+  "mamba_ssm.ops",
+  "mamba_ssm.ops.triton",
+  "mamba_ssm.utils",
+  "mamba_macos",
+]
+
+[tool.setuptools.package-dir]
+"mamba_macos" = "src/mamba_macos"

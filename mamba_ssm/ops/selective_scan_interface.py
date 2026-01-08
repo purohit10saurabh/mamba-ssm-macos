@@ -89,16 +89,57 @@ class SelectiveScanFn(torch.autograd.Function):
     @staticmethod
     def backward(ctx, dout, *args):
         if not has_cuda_support:
-            # Create zero gradients for all inputs
+            # Use autograd to compute gradients through the reference implementation
             u, delta, A, B, C, D, z, delta_bias = ctx.saved_tensors
-            du = torch.zeros_like(u)
-            ddelta = torch.zeros_like(delta)
-            dA = torch.zeros_like(A)
-            dB = torch.zeros_like(B)
-            dC = torch.zeros_like(C)
-            dD = torch.zeros_like(D) if D is not None else None
-            dz = torch.zeros_like(z) if z is not None else None
-            ddelta_bias = torch.zeros_like(delta_bias) if delta_bias is not None else None
+            
+            # Set requires_grad on input tensors
+            u.requires_grad_(True)
+            delta.requires_grad_(True)
+            A.requires_grad_(True)
+            B.requires_grad_(True)
+            C.requires_grad_(True)
+            if D is not None:
+                D.requires_grad_(True)
+            if z is not None:
+                z.requires_grad_(True)
+            if delta_bias is not None:
+                delta_bias.requires_grad_(True)
+            
+            # Forward pass with gradients enabled
+            with torch.enable_grad():
+                out = selective_scan_ref(u, delta, A, B, C, D, z, delta_bias, ctx.delta_softplus, return_last_state=False)
+            
+            # Compute gradients using torch.autograd.grad
+            inputs_to_grad = [u, delta, A, B, C]
+            if D is not None:
+                inputs_to_grad.append(D)
+            if z is not None:
+                inputs_to_grad.append(z)
+            if delta_bias is not None:
+                inputs_to_grad.append(delta_bias)
+            
+            grads = torch.autograd.grad(
+                outputs=out,
+                inputs=inputs_to_grad,
+                grad_outputs=dout,
+                allow_unused=True,
+                create_graph=False
+            )
+            
+            du = grads[0]
+            ddelta = grads[1]
+            dA = grads[2]
+            dB = grads[3]
+            dC = grads[4]
+            idx = 5
+            dD = grads[idx] if D is not None else None
+            if D is not None:
+                idx += 1
+            dz = grads[idx] if z is not None else None
+            if z is not None:
+                idx += 1
+            ddelta_bias = grads[idx] if delta_bias is not None else None
+            
             return (du, ddelta, dA, dB, dC, dD, dz, ddelta_bias, None, None)
             
         if not ctx.has_z:
@@ -153,6 +194,9 @@ def selective_scan_fn(u, delta, A, B, C, D=None, z=None, delta_bias=None, delta_
     last_state has shape (batch, dim, dstate). Note that the gradient of the last state is
     not considered in the backward pass.
     """
+    if not has_cuda_support:
+        # Use reference implementation directly so PyTorch can auto-differentiate
+        return selective_scan_ref(u, delta, A, B, C, D, z, delta_bias, delta_softplus, return_last_state)
     return SelectiveScanFn.apply(u, delta, A, B, C, D, z, delta_bias, delta_softplus, return_last_state)
 
 

@@ -1,6 +1,6 @@
 # 🐍 Mamba for macOS Apple Silicon
 
-**Production-ready [Mamba 1](https://arxiv.org/abs/2312.00752) & [Mamba 2](https://arxiv.org/abs/2405.21060) implementation optimized for Apple Silicon with official pre-trained models**
+**High-performance [Mamba 1](https://arxiv.org/abs/2312.00752) & [Mamba 2](https://arxiv.org/abs/2405.21060) implementation optimized for Apple Silicon with official pre-trained models**
 
 [![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-M1%20%7C%20M2%20%7C%20M3%20%7C%20M4-blue?logo=apple)](https://developer.apple.com/mac/)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-green?logo=python)](https://python.org)
@@ -22,7 +22,7 @@
 # 1. Clone and install
 git clone https://github.com/purohit10saurabh/mamba-ssm-macos.git
 cd mamba-ssm-macos
-pip install -r requirements.txt
+uv sync
 
 # 2. Download models 
 python -m scripts.download_models mamba1    # Mamba 1 (493MB)
@@ -44,6 +44,7 @@ python -m examples.01_demo # Interactive showcase
 - [Repository Structure](#repository-structure)
 - [Advanced Usage](#advanced-usage)
 - [Troubleshooting](#troubleshooting)
+- [Citation](#citation)
 - [References](#references)
 - [Contributing](#contributing)
 
@@ -73,10 +74,10 @@ git clone https://github.com/purohit10saurabh/mamba-ssm-macos.git
 cd mamba-ssm-macos
 
 # Install dependencies (includes PyTorch with MPS support)
-pip install -r requirements.txt
+uv sync
 
 # Verify MPS support
-python -c "import torch; print('MPS Available:', torch.backends.mps.is_available())"
+uv run python -c "import torch; print('MPS Available:', torch.backends.mps.is_available())"
 ```
 
 ### Download Models
@@ -120,22 +121,6 @@ python -m scripts.run_models mamba2 --prompt "The future of AI" --max-length 30
 
 # Custom parameters
 python -m scripts.run_models mamba1 --prompt "Once upon a time" --temperature 0.8
-```
-
-### Python API (Clean Imports)
-```python
-# New organized import structure
-from mamba_macos import get_device, load_and_prepare_model, generate_text_with_model
-
-# Load any model
-device = get_device()  # Automatically detects MPS/CPU
-success, model, tokenizer = load_and_prepare_model("mamba1", "./models", device)
-
-if success:
-    text = generate_text_with_model(
-        model, tokenizer, "The future of AI", device, max_length=50, temperature=0.7
-    )
-    print(text)
 ```
 
 ### Learning Examples
@@ -191,16 +176,16 @@ make test-quick
 
 ```
 mamba-ssm-macos/
-├── 📦 src/mamba_macos/               # 🆕 Core library (clean imports)
-│   ├── __init__.py                   # Package exports & version  
+├── 📦 src/mamba_macos/               # Core library
+│   ├── __init__.py                   # Package exports
 │   ├── utils.py                      # Device, tokenizer, generation
 │   └── models.py                     # Model loading & preparation
 │
-├── 🔧 scripts/                       # 🆕 Utility scripts
+├── 🔧 scripts/                       # Utility scripts
 │   ├── download_models.py            # Download both models
 │   └── run_models.py                 # Run models with arguments
 │
-├── 🧪 tests/                         # 🆕 Organized test suite  
+├── 🧪 tests/                         # Test suite  
 │   ├── unit/                         # Component-level tests
 │   │   ├── test_mamba_macos.py       # Mamba 1 unit tests
 │   │   ├── test_mamba2_macos.py      # Mamba 2 unit tests
@@ -208,29 +193,27 @@ mamba-ssm-macos/
 │   └── integration/                  # End-to-end tests
 │       └── test_unified_system.py    # Complete workflow tests
 │
-├── 📚 examples/                       # 🆕 Curated examples
+├── 📚 examples/                       # Curated examples
 │   ├── 01_demo.py                    # 🎯 START HERE - Production demo
 │   └── 02_basic.py                   # Basic forward pass
-│   └── README.md                     # Examples guide
 │
-├── ⚙️ config/                        # 🆕 Configuration files
+├── ⚙️ config/                        # Configuration files
 │   ├── pyproject.toml                # Python project config
 │   └── setup.py                      # Package setup
 │
-├── 🛠️ tools/                         # 🆕 Development tools
+├── 🛠️ tools/                         # Development tools
 │   └── run_all_tests.py              # Test runner
 │
-├── 🤖 models/                        # Downloaded models
-│   ├── mamba1/                       # Mamba 1 files
-│   └── mamba2/                       # Mamba 2 files
-│
 ├── mamba_ssm/                        # Core implementation
-│   ├── models/ & modules/            # Model architectures
-│   └── ...                           # (Unchanged)
+│   ├── models/                       # Model architectures
+│   ├── modules/                      # Model modules
+│   ├── ops/                          # Operations (CPU/Triton fallbacks)
+│   ├── utils/                        # Utilities
+│   └── distributed/                  # Distributed utilities
 │
-├── 📋 Makefile                       # 🆕 Development commands
-├── 📋 requirements.txt               # 🆕 Dependencies
-├── 📋 PROJECT_STRUCTURE.md           # 🆕 Structure documentation
+├── 📋 Makefile                       # Development commands
+├── 📋 pyproject.toml                 # Project configuration
+├── 📋 uv.toml                        # UV configuration
 └── 📖 README.md                      # This file
 ```
 
@@ -305,11 +288,8 @@ python -c "import torch; print(torch.backends.mps.is_available())"
 
 #### ❌ Import errors
 ```bash
-# Use new module structure
+# Use module structure
 python -m examples.01_demo
-
-# Or run with clean imports
-from mamba_macos import get_device, load_and_prepare_model
 ```
 
 #### ❌ Slow generation
@@ -385,6 +365,23 @@ python -m scripts.run_models mamba1 --prompt "Your text"
 3. **Contribute**: Improve implementation or docs
 4. **Research**: Experiment with architectures
 
+## Citation
+
+If you use this implementation in your research or project, please cite it. GitHub will automatically recognize the citation from the [CITATION.cff](CITATION.cff) file.
+
+**BibTeX format:**
+```bibtex
+@software{purohit2026mamba_macos,
+  title={Mamba for macOS Apple Silicon: Optimized Implementation},
+  author={Purohit, Saurabh and Dao, Tri and Gu, Albert},
+  year={2026},
+  url={https://github.com/purohit10saurabh/mamba-ssm-macos}
+}
+```
+
+**APA format:**
+> Purohit, S., Dao, T., & Gu, A. (2026). Mamba for macOS Apple Silicon: Optimized implementation [Computer software]. https://github.com/purohit10saurabh/mamba-ssm-macos
+
 ## References
 
 ### Papers
@@ -437,8 +434,8 @@ We welcome contributions! Areas for improvement:
 ```bash
 git clone https://github.com/purohit10saurabh/mamba-ssm-macos.git
 cd mamba-ssm-macos
-pip install -e ".[dev]"
-pytest tests/
+uv sync --extra dev
+uv run pytest tests/
 ```
 
 ## License
@@ -447,6 +444,6 @@ Apache 2.0 License - see [LICENSE](LICENSE) file.
 
 ---
 
-**Optimized for Apple Silicon • Pure Python • Production Ready**
+**Optimized for Apple Silicon • Pure Python • High-Performance**
 
 *Start with `python -m examples.01_demo` and explore from there!* ⬆️

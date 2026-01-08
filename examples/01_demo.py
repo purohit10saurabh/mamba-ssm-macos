@@ -16,7 +16,7 @@ import sys
 import time
 from pathlib import Path
 
-# Add src to path for clean imports
+# Add src to path
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 from mamba_macos import (generate_text_with_model, get_device,
@@ -132,7 +132,7 @@ def showcase_structure():
     print("=" * 50)
     
     structure_info = [
-        ("📦 src/mamba_macos/", "Core library with clean imports"),
+        ("📦 src/mamba_macos/", "Core library"),
         ("🔧 scripts/", "Utility scripts (download, run models)"),
         ("🧪 tests/unit/", "Component-level unit tests"),
         ("🧪 tests/integration/", "End-to-end integration tests"),
