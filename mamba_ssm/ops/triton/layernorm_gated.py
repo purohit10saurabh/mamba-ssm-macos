@@ -12,16 +12,29 @@ import torch.nn.functional as F
 try:
     import triton
     import triton.language as tl
+
     has_triton = True
 except ImportError:
     has_triton = False
     import warnings
-    warnings.warn("Triton is not available. Using slower PyTorch implementation for layernorm_gated.")
+
+    warnings.warn(
+        "Triton is not available. Using slower PyTorch implementation for layernorm_gated."
+    )
 
 from einops import rearrange
 
 
-def rms_norm_ref(x, weight, bias, z=None, eps=1e-6, group_size=None, norm_before_gate=True, upcast=True):
+def rms_norm_ref(
+    x,
+    weight,
+    bias,
+    z=None,
+    eps=1e-6,
+    group_size=None,
+    norm_before_gate=True,
+    upcast=True,
+):
     dtype = x.dtype
     N = x.shape[-1]
     weight = weight.float()
@@ -46,27 +59,44 @@ def rms_norm_ref(x, weight, bias, z=None, eps=1e-6, group_size=None, norm_before
 
 
 # Default implementations for non-triton environments
-def _layer_norm_fwd(x, weight, bias, eps, z=None, out=None, group_size=None, norm_before_gate=True, is_rms_norm=False):
+def _layer_norm_fwd(
+    x,
+    weight,
+    bias,
+    eps,
+    z=None,
+    out=None,
+    group_size=None,
+    norm_before_gate=True,
+    is_rms_norm=False,
+):
     # Simple fallback implementation
     if is_rms_norm:
-        return (rms_norm_ref(x, weight, bias, z, eps, group_size, norm_before_gate), None, None)
+        return (
+            rms_norm_ref(x, weight, bias, z, eps, group_size, norm_before_gate),
+            None,
+            None,
+        )
     else:
         if z is not None and not norm_before_gate:
             x = x * F.silu(z)
-        
+
         result = F.layer_norm(x, x.shape[-1:], weight=weight, bias=bias, eps=eps)
-        
+
         if z is not None and norm_before_gate:
             result = result * F.silu(z)
-            
+
         return (result, None, None)
+
 
 def _layer_norm_bwd(*args, **kwargs):
     # This shouldn't be called directly in CPU mode
     raise NotImplementedError("_layer_norm_bwd not implemented for CPU-only mode")
 
+
 # Only define the triton-specific functions if triton is available
 if has_triton:
+
     @triton.heuristics({"HAS_BIAS": lambda args: args["B"] is not None})
     @triton.heuristics({"HAS_Z": lambda args: args["Z"] is not None})
     @triton.jit
@@ -105,17 +135,17 @@ if has_triton:
             B += group * N
         # Compute mean and variance
         cols = tl.arange(0, BLOCK_N)
-        x = tl.load(X + cols, mask=cols < N, other=0.).to(tl.float32)
+        x = tl.load(X + cols, mask=cols < N, other=0.0).to(tl.float32)
         if HAS_Z and not NORM_BEFORE_GATE:
             z = tl.load(Z + cols, mask=cols < N).to(tl.float32)
             x *= z * tl.sigmoid(z)
         if not IS_RMS_NORM:
             mean = tl.sum(x, axis=0) / N
             tl.store(Mean + row, mean)
-            xbar = tl.where(cols < N, x - mean, 0.)
+            xbar = tl.where(cols < N, x - mean, 0.0)
             var = tl.sum(xbar * xbar, axis=0) / N
         else:
-            xbar = tl.where(cols < N, x, 0.)
+            xbar = tl.where(cols < N, x, 0.0)
             var = tl.sum(xbar * xbar, axis=0) / N
         rstd = 1 / tl.sqrt(var + eps)
         tl.store(Rstd + row, rstd)
@@ -133,7 +163,17 @@ if has_triton:
         tl.store(Y + cols, y, mask=mask)
 
     # Override the _layer_norm_fwd implementation with triton version
-    def _layer_norm_fwd(x, weight, bias, eps, z=None, out=None, group_size=None, norm_before_gate=True, is_rms_norm=False):
+    def _layer_norm_fwd(
+        x,
+        weight,
+        bias,
+        eps,
+        z=None,
+        out=None,
+        group_size=None,
+        norm_before_gate=True,
+        is_rms_norm=False,
+    ):
         M, N = x.shape
         if group_size is None:
             group_size = N
@@ -154,8 +194,12 @@ if has_triton:
         else:
             out = torch.empty_like(x)
         assert out.stride(-1) == 1
-        mean = torch.empty((ngroups * M, ), dtype=torch.float32, device=x.device) if not is_rms_norm else None
-        rstd = torch.empty((ngroups * M, ), dtype=torch.float32, device=x.device)
+        mean = (
+            torch.empty((ngroups * M,), dtype=torch.float32, device=x.device)
+            if not is_rms_norm
+            else None
+        )
+        rstd = torch.empty((ngroups * M,), dtype=torch.float32, device=x.device)
         # Less than 64KB per feature: enqueue fused kernel
         MAX_FUSED_SIZE = 65536 // x.element_size()
         BLOCK_N = min(MAX_FUSED_SIZE, triton.next_power_of_2(group_size))
@@ -165,13 +209,25 @@ if has_triton:
         num_warps = min(max(BLOCK_N // 256, 1), 8)
         grid = (M, ngroups)
         with torch.cuda.device(x.device.index):
-            _layer_norm_fwd_1pass_kernel[grid](x, out, weight, bias, z, mean, rstd,
-                                            x.stride(0), out.stride(0), z.stride(0) if z is not None else 0,
-                                            M, group_size, eps,
-                                            BLOCK_N=BLOCK_N,
-                                            NORM_BEFORE_GATE=norm_before_gate,
-                                            IS_RMS_NORM=is_rms_norm,
-                                            num_warps=num_warps)
+            _layer_norm_fwd_1pass_kernel[grid](
+                x,
+                out,
+                weight,
+                bias,
+                z,
+                mean,
+                rstd,
+                x.stride(0),
+                out.stride(0),
+                z.stride(0) if z is not None else 0,
+                M,
+                group_size,
+                eps,
+                BLOCK_N=BLOCK_N,
+                NORM_BEFORE_GATE=norm_before_gate,
+                IS_RMS_NORM=is_rms_norm,
+                num_warps=num_warps,
+            )
         return out, mean, rstd
 
     @triton.heuristics({"HAS_BIAS": lambda args: args["B"] is not None})
@@ -179,18 +235,18 @@ if has_triton:
     @triton.heuristics({"RECOMPUTE_OUTPUT": lambda args: args["Y"] is not None})
     @triton.jit
     def _layer_norm_bwd_kernel(
-        X,   # pointer to the input
-        W,   # pointer to the weights
-        B,   # pointer to the biases
-        Z,   # pointer to the other branch
-        Y,   # pointer to the output to be recomputed
+        X,  # pointer to the input
+        W,  # pointer to the weights
+        B,  # pointer to the biases
+        Z,  # pointer to the other branch
+        Y,  # pointer to the output to be recomputed
         DY,  # pointer to the output gradient
         DX,  # pointer to the input gradient
         DW,  # pointer to the partial sum of weights gradient
         DB,  # pointer to the partial sum of biases gradient
         DZ,  # pointer to the other branch
-        Mean,   # pointer to the mean
-        Rstd,   # pointer to the 1/std
+        Mean,  # pointer to the mean
+        Rstd,  # pointer to the 1/std
         stride_x_row,  # how much to increase the pointer when moving by 1 row
         stride_z_row,
         stride_y_row,
@@ -231,7 +287,7 @@ if has_triton:
         w = tl.load(W + cols, mask=mask).to(tl.float32)
         if (RECOMPUTE_OUTPUT or HAS_Z) and HAS_BIAS:
             B += group * N
-            b = tl.load(B + cols, mask=mask, other=0.).to(tl.float32)
+            b = tl.load(B + cols, mask=mask, other=0.0).to(tl.float32)
         dw = tl.zeros((BLOCK_N,), dtype=tl.float32)
         if HAS_BIAS:
             db = tl.zeros((BLOCK_N,), dtype=tl.float32)
@@ -243,15 +299,15 @@ if has_triton:
             if not IS_RMS_NORM:
                 mean = tl.load(Mean + row)
             if HAS_Z and not NORM_BEFORE_GATE:
-                z = tl.load(Z + cols, mask=mask, other=0.).to(tl.float32)
+                z = tl.load(Z + cols, mask=mask, other=0.0).to(tl.float32)
                 x_og = x
                 x = x_og * z * tl.sigmoid(z)
             rstd = tl.load(Rstd + row)
             # Compute dx
             xhat = (x - mean) * rstd if not IS_RMS_NORM else x * rstd
-            xhat = tl.where(mask, xhat, 0.)
+            xhat = tl.where(mask, xhat, 0.0)
             if HAS_Z and NORM_BEFORE_GATE:
-                z = tl.load(Z + cols, mask=mask, other=0.).to(tl.float32)
+                z = tl.load(Z + cols, mask=mask, other=0.0).to(tl.float32)
                 z_sigmoid = tl.sigmoid(z)
                 y = xhat * w + b if HAS_BIAS else xhat * w
                 if RECOMPUTE_OUTPUT:
@@ -291,11 +347,27 @@ if has_triton:
             DX += stride_dx_row
         tl.store(DW + row_block_id * stride_dw_row + group * N + cols, dw, mask=mask)
         if HAS_BIAS:
-            tl.store(DB + row_block_id * stride_db_row + group * N + cols, db, mask=mask)
+            tl.store(
+                DB + row_block_id * stride_db_row + group * N + cols, db, mask=mask
+            )
 
     # Override the _layer_norm_bwd implementation with triton version
-    def _layer_norm_bwd(dy, x, weight, bias, eps, mean, rstd, z=None, group_size=None,
-                        norm_before_gate=True, is_rms_norm=False, recompute_output=False, dz=None, out=None):
+    def _layer_norm_bwd(
+        dy,
+        x,
+        weight,
+        bias,
+        eps,
+        mean,
+        rstd,
+        z=None,
+        group_size=None,
+        norm_before_gate=True,
+        is_rms_norm=False,
+        recompute_output=False,
+        dz=None,
+        out=None,
+    ):
         M, N = x.shape
         if group_size is None:
             group_size = N
@@ -337,38 +409,69 @@ if has_triton:
         # would limit the occupancy.
         nrow_groups = math.ceil(sm_count * math.ceil(4 / num_warps) / ngroups)
         _dw = torch.empty((nrow_groups, N), dtype=torch.float32, device=weight.device)
-        _db = torch.empty((nrow_groups, N), dtype=torch.float32, device=bias.device) if bias is not None else None
+        _db = (
+            torch.empty((nrow_groups, N), dtype=torch.float32, device=bias.device)
+            if bias is not None
+            else None
+        )
         rows_per_program = math.ceil(M / nrow_groups)
         grid = (nrow_groups, ngroups)
         with torch.cuda.device(x.device.index):
-            _layer_norm_bwd_kernel[grid](x, weight, bias, z, out if recompute_output else None,
-                                        dy, dx, _dw, _db, dz, mean, rstd,
-                                        x.stride(0),
-                                        z.stride(0) if z is not None else 0,
-                                        0 if not recompute_output else out.stride(0),
-                                        dy.stride(0), dx.stride(0),
-                                        dz.stride(0) if dz is not None else 0,
-                                        _dw.stride(0),
-                                        _db.stride(0) if _db is not None else 0,
-                                        M, group_size, eps,
-                                        rows_per_program,
-                                        BLOCK_N=BLOCK_N,
-                                        NORM_BEFORE_GATE=norm_before_gate,
-                                        IS_RMS_NORM=is_rms_norm,
-                                        num_warps=num_warps)
+            _layer_norm_bwd_kernel[grid](
+                x,
+                weight,
+                bias,
+                z,
+                out if recompute_output else None,
+                dy,
+                dx,
+                _dw,
+                _db,
+                dz,
+                mean,
+                rstd,
+                x.stride(0),
+                z.stride(0) if z is not None else 0,
+                0 if not recompute_output else out.stride(0),
+                dy.stride(0),
+                dx.stride(0),
+                dz.stride(0) if dz is not None else 0,
+                _dw.stride(0),
+                _db.stride(0) if _db is not None else 0,
+                M,
+                group_size,
+                eps,
+                rows_per_program,
+                BLOCK_N=BLOCK_N,
+                NORM_BEFORE_GATE=norm_before_gate,
+                IS_RMS_NORM=is_rms_norm,
+                num_warps=num_warps,
+            )
         dw = _dw.sum(0).to(weight.dtype)
         db = _db.sum(0).to(bias.dtype) if bias is not None else None
         return (dx, dw, db, dz) if not recompute_output else (dx, dw, db, dz, out)
 
+
 class LayerNormFn(torch.autograd.Function):
 
     @staticmethod
-    def forward(ctx, x, weight, bias, z=None, eps=1e-6, group_size=None, norm_before_gate=True,
-                is_rms_norm=False):
+    def forward(
+        ctx,
+        x,
+        weight,
+        bias,
+        z=None,
+        eps=1e-6,
+        group_size=None,
+        norm_before_gate=True,
+        is_rms_norm=False,
+    ):
         if not has_triton:
             # Fallback to reference implementation for forward
             if is_rms_norm:
-                out = rms_norm_ref(x, weight, bias, z, eps, group_size, norm_before_gate)
+                out = rms_norm_ref(
+                    x, weight, bias, z, eps, group_size, norm_before_gate
+                )
             else:
                 # Use PyTorch's layer_norm, but handle the gating ourselves
                 if z is not None and not norm_before_gate:
@@ -382,7 +485,7 @@ class LayerNormFn(torch.autograd.Function):
             ctx.norm_before_gate = norm_before_gate
             ctx.is_rms_norm = is_rms_norm
             return out
-            
+
         device = x.device
         assert x.is_cuda
         x_shape_og = x.shape
@@ -398,7 +501,16 @@ class LayerNormFn(torch.autograd.Function):
         weight = weight.contiguous()
         if bias is not None:
             bias = bias.contiguous()
-        y, mean, rstd = _layer_norm_fwd(x, weight, bias, eps, z=z, group_size=group_size, norm_before_gate=norm_before_gate, is_rms_norm=is_rms_norm)
+        y, mean, rstd = _layer_norm_fwd(
+            x,
+            weight,
+            bias,
+            eps,
+            z=z,
+            group_size=group_size,
+            norm_before_gate=norm_before_gate,
+            is_rms_norm=is_rms_norm,
+        )
         ctx.save_for_backward(x, weight, bias, mean, rstd, z)
         ctx.x_shape_og = x_shape_og
         ctx.eps = eps
@@ -416,62 +528,131 @@ class LayerNormFn(torch.autograd.Function):
             group_size = ctx.group_size
             norm_before_gate = ctx.norm_before_gate
             is_rms_norm = ctx.is_rms_norm
-            
+
             with torch.enable_grad():
                 x_detached = x.detach().requires_grad_()
                 weight_detached = weight.detach().requires_grad_()
-                bias_detached = bias.detach().requires_grad_() if bias is not None else None
+                bias_detached = (
+                    bias.detach().requires_grad_() if bias is not None else None
+                )
                 z_detached = z.detach().requires_grad_() if z is not None else None
-                
+
                 if is_rms_norm:
-                    out = rms_norm_ref(x_detached, weight_detached, bias_detached, z_detached, 
-                                      eps, group_size, norm_before_gate)
+                    out = rms_norm_ref(
+                        x_detached,
+                        weight_detached,
+                        bias_detached,
+                        z_detached,
+                        eps,
+                        group_size,
+                        norm_before_gate,
+                    )
                 else:
                     if z_detached is not None and not norm_before_gate:
                         x_gated = x_detached * F.silu(z_detached)
-                        out = F.layer_norm(x_gated, x_gated.shape[-1:], weight=weight_detached, bias=bias_detached, eps=eps)
+                        out = F.layer_norm(
+                            x_gated,
+                            x_gated.shape[-1:],
+                            weight=weight_detached,
+                            bias=bias_detached,
+                            eps=eps,
+                        )
                     else:
-                        out = F.layer_norm(x_detached, x_detached.shape[-1:], weight=weight_detached, bias=bias_detached, eps=eps)
+                        out = F.layer_norm(
+                            x_detached,
+                            x_detached.shape[-1:],
+                            weight=weight_detached,
+                            bias=bias_detached,
+                            eps=eps,
+                        )
                         if z_detached is not None and norm_before_gate:
                             out = out * F.silu(z_detached)
-                
+
                 inputs = [x_detached, weight_detached]
                 if bias_detached is not None:
                     inputs.append(bias_detached)
                 if z_detached is not None:
                     inputs.append(z_detached)
-                    
-                grads = torch.autograd.grad(outputs=[out], inputs=inputs, 
-                                          grad_outputs=[dy], create_graph=False, allow_unused=True)
-                
+
+                grads = torch.autograd.grad(
+                    outputs=[out],
+                    inputs=inputs,
+                    grad_outputs=[dy],
+                    create_graph=False,
+                    allow_unused=True,
+                )
+
                 dx = grads[0]
                 dw = grads[1]
                 db = grads[2] if bias_detached is not None else None
                 dz = grads[-1] if z_detached is not None else None
-                
+
             return dx, dw, db, dz, None, None, None, None
-        
+
         # Original implementation for Triton
         x, weight, bias, mean, rstd, z = ctx.saved_tensors
-        dx, dw, db, dz = _layer_norm_bwd(dy.reshape(-1, dy.shape[-1]), x, weight, bias, ctx.eps, mean, rstd, z, ctx.group_size,
-                                         ctx.norm_before_gate, ctx.is_rms_norm)
-        return dx.reshape(ctx.x_shape_og), dw, db, dz.reshape(ctx.x_shape_og) if dz is not None else None, None, None, None, None
+        dx, dw, db, dz = _layer_norm_bwd(
+            dy.reshape(-1, dy.shape[-1]),
+            x,
+            weight,
+            bias,
+            ctx.eps,
+            mean,
+            rstd,
+            z,
+            ctx.group_size,
+            ctx.norm_before_gate,
+            ctx.is_rms_norm,
+        )
+        return (
+            dx.reshape(ctx.x_shape_og),
+            dw,
+            db,
+            dz.reshape(ctx.x_shape_og) if dz is not None else None,
+            None,
+            None,
+            None,
+            None,
+        )
 
 
-def layernorm_fn(x, weight, bias, z=None, eps=1e-6, group_size=None, norm_before_gate=True, is_rms_norm=False):
-    return LayerNormFn.apply(x, weight, bias, z, eps, group_size, norm_before_gate, is_rms_norm)
+def layernorm_fn(
+    x,
+    weight,
+    bias,
+    z=None,
+    eps=1e-6,
+    group_size=None,
+    norm_before_gate=True,
+    is_rms_norm=False,
+):
+    return LayerNormFn.apply(
+        x, weight, bias, z, eps, group_size, norm_before_gate, is_rms_norm
+    )
 
 
-def rmsnorm_fn(x, weight, bias, z=None, eps=1e-6, group_size=None, norm_before_gate=True):
+def rmsnorm_fn(
+    x, weight, bias, z=None, eps=1e-6, group_size=None, norm_before_gate=True
+):
     if not has_triton:
         # Fallback to reference implementation
         return rms_norm_ref(x, weight, bias, z, eps, group_size, norm_before_gate)
-    return LayerNormFn.apply(x, weight, bias, z, eps, group_size, norm_before_gate, True)
+    return LayerNormFn.apply(
+        x, weight, bias, z, eps, group_size, norm_before_gate, True
+    )
 
 
 class LayerNorm(torch.nn.Module):
 
-    def __init__(self, hidden_size, eps=1e-5, group_size=None, norm_before_gate=True, device=None, dtype=None):
+    def __init__(
+        self,
+        hidden_size,
+        eps=1e-5,
+        group_size=None,
+        norm_before_gate=True,
+        device=None,
+        dtype=None,
+    ):
         """If group_size is not None, we do GroupNorm with each group having group_size elements.
         group_size=None is equivalent to group_size=hidden_size (i.e. there's only 1 group).
         """
@@ -490,15 +671,29 @@ class LayerNorm(torch.nn.Module):
         torch.nn.init.zeros_(self.bias)
 
     def forward(self, x, z=None):
-        """If z is not None, we do norm(x) * silu(z) if norm_before_gate, else norm(x * silu(z))
-        """
-        return layernorm_fn(x, self.weight, self.bias, z=z, group_size=self.group_size, eps=self.eps,
-                            norm_before_gate=self.norm_before_gate)
+        """If z is not None, we do norm(x) * silu(z) if norm_before_gate, else norm(x * silu(z))"""
+        return layernorm_fn(
+            x,
+            self.weight,
+            self.bias,
+            z=z,
+            group_size=self.group_size,
+            eps=self.eps,
+            norm_before_gate=self.norm_before_gate,
+        )
 
 
 class RMSNorm(torch.nn.Module):
 
-    def __init__(self, hidden_size, eps=1e-5, group_size=None, norm_before_gate=True, device=None, dtype=None):
+    def __init__(
+        self,
+        hidden_size,
+        eps=1e-5,
+        group_size=None,
+        norm_before_gate=True,
+        device=None,
+        dtype=None,
+    ):
         """If group_size is not None, we do GroupNorm with each group having group_size elements.
         group_size=None is equivalent to group_size=hidden_size (i.e. there's only 1 group).
         """
@@ -515,7 +710,13 @@ class RMSNorm(torch.nn.Module):
         torch.nn.init.ones_(self.weight)
 
     def forward(self, x, z=None):
-        """If z is not None, we do norm(x) * silu(z) if norm_before_gate, else norm(x * silu(z))
-        """
-        return rmsnorm_fn(x, self.weight, self.bias, z=z, eps=self.eps, group_size=self.group_size,
-                          norm_before_gate=self.norm_before_gate)
+        """If z is not None, we do norm(x) * silu(z) if norm_before_gate, else norm(x * silu(z))"""
+        return rmsnorm_fn(
+            x,
+            self.weight,
+            self.bias,
+            z=z,
+            eps=self.eps,
+            group_size=self.group_size,
+            norm_before_gate=self.norm_before_gate,
+        )

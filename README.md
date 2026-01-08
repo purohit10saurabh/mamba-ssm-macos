@@ -190,8 +190,9 @@ mamba-ssm-macos/
 │   │   ├── test_mamba_macos.py       # Mamba 1 unit tests
 │   │   ├── test_mamba2_macos.py      # Mamba 2 unit tests
 │   │   └── test_generation_macos.py  # Generation tests
-│   └── integration/                  # End-to-end tests
-│       └── test_unified_system.py    # Complete workflow tests
+│   ├── integration/                  # End-to-end tests
+│   │   └── test_unified_system.py    # Complete workflow tests
+│   └── run_all_tests.py              # Test runner
 │
 ├── 📚 examples/                       # Curated examples
 │   ├── 01_demo.py                    # 🎯 START HERE - Production demo
@@ -200,9 +201,6 @@ mamba-ssm-macos/
 ├── ⚙️ config/                        # Configuration files
 │   ├── pyproject.toml                # Python project config
 │   └── setup.py                      # Package setup
-│
-├── 🛠️ tools/                         # Development tools
-│   └── run_all_tests.py              # Test runner
 │
 ├── mamba_ssm/                        # Core implementation
 │   ├── models/                       # Model architectures
@@ -435,7 +433,7 @@ We welcome contributions! Areas for improvement:
 git clone https://github.com/purohit10saurabh/mamba-ssm-macos.git
 cd mamba-ssm-macos
 uv sync --extra dev
-uv run pytest tests/
+make test
 ```
 
 ## License

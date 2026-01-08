@@ -21,8 +21,12 @@ class GatedMLP(nn.Module):
         hidden_features = (
             hidden_features if hidden_features is not None else int(8 * in_features / 3)
         )
-        hidden_features = (hidden_features + multiple_of - 1) // multiple_of * multiple_of
-        self.fc1 = nn.Linear(in_features, 2 * hidden_features, bias=bias, **factory_kwargs)
+        hidden_features = (
+            (hidden_features + multiple_of - 1) // multiple_of * multiple_of
+        )
+        self.fc1 = nn.Linear(
+            in_features, 2 * hidden_features, bias=bias, **factory_kwargs
+        )
         self.activation = activation
         self.fc2 = nn.Linear(hidden_features, out_features, bias=bias, **factory_kwargs)
 

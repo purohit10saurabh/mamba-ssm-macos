@@ -52,8 +52,7 @@ class TestSelectiveScanGradients(unittest.TestCase):
         out2 = selective_scan_fn(u2, delta2, A2, B2, C2)
         loss2 = out2.sum()
 
-        (grad_u2, grad_delta2, grad_A2, 
-         grad_B2, grad_C2) = torch.autograd.grad(
+        (grad_u2, grad_delta2, grad_A2, grad_B2, grad_C2) = torch.autograd.grad(
             loss2, [u2, delta2, A2, B2, C2], retain_graph=False
         )
 
@@ -70,7 +69,6 @@ class TestSelectiveScanGradients(unittest.TestCase):
         self.assertGreater(grad_A1.abs().mean().item(), 1e-7)
         self.assertGreater(grad_B1.abs().mean().item(), 1e-7)
         self.assertGreater(grad_C1.abs().mean().item(), 1e-7)
-
 
 
 def run_selective_scan_gradient_tests():
@@ -95,4 +93,3 @@ def run_selective_scan_gradient_tests():
 
 if __name__ == "__main__":
     run_selective_scan_gradient_tests()
-

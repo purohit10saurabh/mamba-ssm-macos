@@ -6,8 +6,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from mamba_macos import (generate_text_with_model, get_device,
-                         load_and_prepare_model)
+from mamba_macos import generate_text_with_model, get_device, load_and_prepare_model
 
 
 def run_generation(model, tokenizer, args, model_name):

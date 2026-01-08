@@ -1,7 +1,7 @@
 .PHONY: install install-dev test test-unit test-integration test-quick clean download-models run-mamba1 run-mamba2 format show-structure help
 
 # Default Python command
-PYTHON := python
+PYTHON := uv run python
 
 # Installation
 install:
@@ -12,7 +12,7 @@ install:
 test: test-unit test-integration
 
 test-unit:
-	$(PYTHON) -m tools.run_all_tests
+	$(PYTHON) -m tests.run_all_tests
 
 test-integration:
 	$(PYTHON) -m tests.integration.test_unified_system

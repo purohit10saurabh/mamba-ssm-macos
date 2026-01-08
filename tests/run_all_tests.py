@@ -2,7 +2,7 @@
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).parent))
+sys.path.append(str(Path(__file__).parent.parent))
 
 from tests.unit.test_generation_macos import run_generation_tests
 from tests.unit.test_mamba2_macos import run_mamba2_tests

@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """Model loading and preparation utilities for Mamba SSM on macOS."""
 
-from .utils import (create_mamba1_config, create_mamba2_config,
-                    create_model_with_fallback, create_tokenizer, find_config,
-                    load_model_weights)
+from .utils import (
+    create_mamba1_config,
+    create_mamba2_config,
+    create_model_with_fallback,
+    create_tokenizer,
+    find_config,
+    load_model_weights,
+)
 
 
 def get_model_paths(model_name, model_dir):

@@ -68,6 +68,7 @@ def download_model(model_type, model_dir):
             local_dir=local_dir,
             resume_download=True,
             local_dir_use_symlinks=False,
+            tqdm_class=tqdm,
         )
 
         print("🔄 Renaming files...")
