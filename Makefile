@@ -52,7 +52,6 @@ show-structure:
 	@echo "tests/unit/          - Unit tests"
 	@echo "tests/integration/   - Integration tests"
 	@echo "examples/            - Usage examples"
-	@echo "config/              - Configuration files"
 	@echo "models/              - Downloaded models"
 
 help:
