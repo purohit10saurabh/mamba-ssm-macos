@@ -6,10 +6,7 @@ import warnings
 
 # Check for MacOS Apple Silicon and provide information
 if sys.platform == "darwin" and platform.machine() == "arm64":
-    print(
-        "🍎 Mamba2MacOS: Running on macOS Apple Silicon with MPS acceleration support. "
-        "This implementation is optimized for M1/M2/M3/M4 chips."
-    )
+    print("Mamba2MacOS: Running on macOS Apple Silicon with MPS acceleration support")
 
 # Import basic functions that should work with fallbacks
 from mamba_ssm.ops.selective_scan_interface import mamba_inner_fn, selective_scan_fn
