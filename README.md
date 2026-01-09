@@ -31,7 +31,9 @@ uv run python -m scripts.download_models mamba2    # Mamba 2 (493MB)
 # 3. Generate text immediately  
 make run-mamba1                              # Quick Mamba 1 demo
 make run-mamba2                              # Quick Mamba 2 demo
-uv run python -m examples.01_demo # Interactive showcase
+uv run python -m examples.01_core_modules # Core modules usage
+uv run python -m examples.02_text_generation # Text generation demo
+uv run python -m examples.03_training # Training example
 ```
 
 ## Table of Contents
@@ -99,8 +101,8 @@ uv run python -m scripts.download_models mamba2  # Mamba 2 (latest)
 
 #### Quick Test
 ```bash
-uv run python -m examples.01_demo --interactive  # Try both models
-uv run python -m examples.01_demo --show-structure  # See organization
+uv run python -m examples.02_text_generation --interactive  # Try both models
+uv run python -m examples.02_text_generation --show-structure  # See organization
 ```
 
 #### Makefile Commands
@@ -125,8 +127,9 @@ uv run python -m scripts.run_models mamba1 --prompt "Once upon a time" --tempera
 
 ### Learning Examples
 ```bash
-uv run python -m examples.01_demo      # Interactive demo
-uv run python -m examples.02_basic     # Basic API usage
+uv run python -m examples.01_core_modules      # Core modules usage
+uv run python -m examples.02_text_generation  # Text generation demo
+uv run python -m examples.03_training        # Training example
 ```
 
 ## Performance
@@ -195,8 +198,9 @@ mamba-ssm-macos/
 │   └── run_all_tests.py              # Test runner
 │
 ├── 📚 examples/                       # Curated examples
-│   ├── 01_demo.py                    # 🎯 START HERE - Production demo
-│   └── 02_basic.py                   # Basic forward pass
+│   ├── 01_core_modules.py             # Core modules usage (Mamba 1 & 2)
+│   ├── 02_text_generation.py          # Text generation with pretrained models
+│   └── 03_training.py                 # Simple training example
 │
 ├── ⚙️ config/                        # Configuration files
 │   └── pyproject.toml                # Python project config
@@ -286,7 +290,7 @@ uv run python -c "import torch; print(torch.backends.mps.is_available())"
 #### ❌ Import errors
 ```bash
 # Use module structure
-uv run python -m examples.01_demo
+uv run python -m examples.02_text_generation
 ```
 
 #### ❌ Slow generation
@@ -303,9 +307,9 @@ UserWarning: Triton is not available
 These are expected - we use optimized PyTorch fallbacks.
 
 ### Getting Help
-1. 📖 **Read the docs**: Check `PROJECT_STRUCTURE.md` for organization details
+1. 📖 **Read the docs**: See this README for installation, usage examples, and troubleshooting
 2. 🧪 **Run tests**: `make test-quick` or `make test` 
-3. 🔍 **Check examples**: `uv run python -m examples.01_demo --show-structure`
+3. 🔍 **Check examples**: `uv run python -m examples.02_text_generation --show-structure`
 4. 🐛 **Report issues**: Create GitHub issue with error details
 
 ## Learning Path
@@ -319,13 +323,13 @@ make download-models
 make run-mamba1
 
 # 3. Explore interactively
-uv run python -m examples.01_demo
+uv run python -m examples.02_text_generation
 ```
 
 ### Build Something
 ```bash
 # Use Python API
-uv run python -m examples.02_basic
+uv run python -m examples.01_core_modules
 
 # Custom generation
 uv run python -m scripts.run_models mamba1 --prompt "Your text"
@@ -443,4 +447,4 @@ Apache 2.0 License - see [LICENSE](LICENSE) file.
 
 **Optimized for Apple Silicon • Pure Python • High-Performance**
 
-*Start with `uv run python -m examples.01_demo` and explore from there!* ⬆️
+*Start with `uv run python -m examples.01_core_modules` and explore from there!* ⬆️

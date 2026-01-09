@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Mamba Demo - Production Model Text Generation
+Mamba Demo - Pretrained Model Text Generation
 
 This example demonstrates text generation using downloaded Mamba1 and Mamba2 models.
 
 Features:
-- Uses production Mamba models (130M parameters each)
-- Supports both Mamba1 and Mamba2 architectures
+- Uses pretrained Mamba1 and Mamba2 models (both with 130M parameters)
+- Supports both architectures
 - Interactive and automated generation modes
 - Shows proper device selection and error handling
 """
@@ -19,7 +19,8 @@ from pathlib import Path
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from mamba_macos import generate_text_with_model, get_device, load_and_prepare_model
+from mamba_macos import (generate_text_with_model, get_device,
+                         load_and_prepare_model)
 
 
 def demo_model(model_name, prompts, model_dir="./models"):
@@ -83,6 +84,7 @@ def interactive_mode():
         success, model, tokenizer = load_and_prepare_model(
             model_name, "./models", device
         )
+
         if success:
             models[model_name] = (model, tokenizer)
             print(f"✅ {model_name} ready")
@@ -154,7 +156,7 @@ def showcase_structure():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Mamba Production Demo")
+    parser = argparse.ArgumentParser(description="Mamba pretrained Demo")
     parser.add_argument("--interactive", action="store_true", help="Interactive mode")
     parser.add_argument(
         "--model",
@@ -168,9 +170,9 @@ def main():
 
     args = parser.parse_args()
 
-    print("🎉 Mamba Production Demo")
+    print("🎉 Mamba inference demo")
     print("=" * 50)
-    print("Text generation with production Mamba models")
+    print("Text generation with pretrained Mamba models")
 
     if args.show_structure:
         showcase_structure()
@@ -214,9 +216,9 @@ def main():
     print("=" * 50)
     print(f"✅ Successfully tested {success_count}/{len(models_to_test)} models")
     print("📋 Try these commands:")
-    print("  python -m examples.01_demo --interactive")
-    print("  python -m examples.01_demo --show-structure")
-    print("  python -m examples.01_demo --model mamba1")
+    print("  python -m examples.02_text_generation --interactive")
+    print("  python -m examples.02_text_generation --show-structure")
+    print("  python -m examples.02_text_generation --model mamba1")
     print("\n🛠️ Development commands:")
     print("  make test-quick    # Quick integration test")
     print("  make run-mamba1    # Run Mamba1 demo")
