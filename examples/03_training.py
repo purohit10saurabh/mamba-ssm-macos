@@ -18,13 +18,19 @@ DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"
 
 
 class SimpleMambaLM(nn.Module):
-    def __init__(self, vocab_size=1000, d_model=128, d_state=16, n_layers=2, device=DEVICE):
+    def __init__(
+        self, vocab_size=1000, d_model=128, d_state=16, n_layers=2, device=DEVICE
+    ):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, d_model)
-        self.layers = nn.ModuleList([
-            Mamba(d_model=d_model, d_state=d_state, d_conv=4, expand=2, device=device)
-            for _ in range(n_layers)
-        ])
+        self.layers = nn.ModuleList(
+            [
+                Mamba(
+                    d_model=d_model, d_state=d_state, d_conv=4, expand=2, device=device
+                )
+                for _ in range(n_layers)
+            ]
+        )
         self.norm = nn.LayerNorm(d_model)
         self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
         self.to(device)
@@ -39,22 +45,32 @@ class SimpleMambaLM(nn.Module):
 
 
 class SimpleMamba2LM(nn.Module):
-    def __init__(self, vocab_size=1000, d_model=128, d_state=64, n_layers=2, headdim=64, device=DEVICE):
+    def __init__(
+        self,
+        vocab_size=1000,
+        d_model=128,
+        d_state=64,
+        n_layers=2,
+        headdim=64,
+        device=DEVICE,
+    ):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, d_model)
-        self.layers = nn.ModuleList([
-            Mamba2MacOS(
-                d_model=d_model,
-                d_state=d_state,
-                d_conv=4,
-                expand=2,
-                headdim=headdim,
-                ngroups=1,
-                chunk_size=256,
-                device=device
-            )
-            for _ in range(n_layers)
-        ])
+        self.layers = nn.ModuleList(
+            [
+                Mamba2MacOS(
+                    d_model=d_model,
+                    d_state=d_state,
+                    d_conv=4,
+                    expand=2,
+                    headdim=headdim,
+                    ngroups=1,
+                    chunk_size=256,
+                    device=device,
+                )
+                for _ in range(n_layers)
+            ]
+        )
         self.norm = nn.LayerNorm(d_model)
         self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
         self.to(device)
@@ -71,14 +87,14 @@ class SimpleMamba2LM(nn.Module):
 def create_learnable_data(batch_size=4, seq_len=32, vocab_size=100, task="shift"):
     """
     Create data with elementary transformations to verify model learning.
-    
+
     Tasks:
     - "shift": labels[i] = input_ids[i-1] (previous token prediction)
     - "copy": labels[i] = input_ids[i] (copy current token)
     """
     if task not in ["shift", "copy"]:
         raise ValueError(f"Invalid task: {task}")
-    
+
     input_ids = torch.randint(0, vocab_size, (batch_size, seq_len), device=DEVICE)
     if task == "shift":
         labels = torch.roll(input_ids, shifts=1, dims=1)
@@ -86,6 +102,7 @@ def create_learnable_data(batch_size=4, seq_len=32, vocab_size=100, task="shift"
     else:
         labels = input_ids.clone()
     return input_ids, labels
+
 
 def train_step(model, input_ids, labels, optimizer, criterion):
     model.train()
@@ -123,10 +140,7 @@ def train_mamba1(task, num_steps):
     print(f"  d_model: {d_model}")
     print(f"  d_state: {d_state}")
     print(f"  Layers: {n_layers}")
-    task_desc = {
-        "shift": "labels[i] = input[i-1]",
-        "copy": "labels[i] = input[i]"
-    }
+    task_desc = {"shift": "labels[i] = input[i-1]", "copy": "labels[i] = input[i]"}
     print(f"  Task: {task} ({task_desc.get(task, 'unknown')})")
 
     model = SimpleMambaLM(
@@ -134,7 +148,7 @@ def train_mamba1(task, num_steps):
         d_model=d_model,
         d_state=d_state,
         n_layers=n_layers,
-        device=DEVICE
+        device=DEVICE,
     )
 
     total_params = sum(p.numel() for p in model.parameters())
@@ -148,23 +162,33 @@ def train_mamba1(task, num_steps):
     for step in range(1, num_steps + 1):
         input_ids, labels = create_learnable_data(batch_size, seq_len, vocab_size, task)
         loss = train_step(model, input_ids, labels, optimizer, criterion)
-        
+
         if step == 1:
             initial_loss = loss
-        
+
         if step % 5 == 0 or step == 1:
-            test_input, test_labels = create_learnable_data(batch_size, seq_len, vocab_size, task)
+            test_input, test_labels = create_learnable_data(
+                batch_size, seq_len, vocab_size, task
+            )
             test_loss, accuracy = evaluate(model, test_input, test_labels, criterion)
-            print(f"  Step {step:2d}/{num_steps}: Loss = {loss:.4f}, Test Loss = {test_loss:.4f}, Accuracy = {accuracy:.2%}")
+            print(
+                f"  Step {step:2d}/{num_steps}: Loss = {loss:.4f}, Test Loss = {test_loss:.4f}, Accuracy = {accuracy:.2%}"
+            )
 
     if initial_loss is not None:
-        final_test_input, final_test_labels = create_learnable_data(batch_size, seq_len, vocab_size, task)
-        final_loss, final_accuracy = evaluate(model, final_test_input, final_test_labels, criterion)
+        final_test_input, final_test_labels = create_learnable_data(
+            batch_size, seq_len, vocab_size, task
+        )
+        final_loss, final_accuracy = evaluate(
+            model, final_test_input, final_test_labels, criterion
+        )
         improvement = initial_loss - final_loss
         print(f"\n📈 Learning Progress:")
         print(f"  Initial Loss: {initial_loss:.4f}")
         print(f"  Final Loss: {final_loss:.4f}")
-        print(f"  Improvement: {improvement:.4f} ({improvement/initial_loss*100:.1f}% reduction)")
+        print(
+            f"  Improvement: {improvement:.4f} ({improvement/initial_loss*100:.1f}% reduction)"
+        )
         print(f"  Final Accuracy: {final_accuracy:.2%}")
 
     print("✅ Mamba 1 training completed!")
@@ -188,10 +212,7 @@ def train_mamba2(task, num_steps):
     print(f"  d_state: {d_state}")
     print(f"  headdim: {headdim}")
     print(f"  Layers: {n_layers}")
-    task_desc = {
-        "shift": "labels[i] = input[i-1]",
-        "copy": "labels[i] = input[i]"
-    }
+    task_desc = {"shift": "labels[i] = input[i-1]", "copy": "labels[i] = input[i]"}
     print(f"  Task: {task} ({task_desc.get(task, 'unknown')})")
 
     model = SimpleMamba2LM(
@@ -200,7 +221,7 @@ def train_mamba2(task, num_steps):
         d_state=d_state,
         n_layers=n_layers,
         headdim=headdim,
-        device=DEVICE
+        device=DEVICE,
     )
 
     total_params = sum(p.numel() for p in model.parameters())
@@ -214,23 +235,33 @@ def train_mamba2(task, num_steps):
     for step in range(1, num_steps + 1):
         input_ids, labels = create_learnable_data(batch_size, seq_len, vocab_size, task)
         loss = train_step(model, input_ids, labels, optimizer, criterion)
-        
+
         if step == 1:
             initial_loss = loss
-        
+
         if step % 5 == 0 or step == 1:
-            test_input, test_labels = create_learnable_data(batch_size, seq_len, vocab_size, task)
+            test_input, test_labels = create_learnable_data(
+                batch_size, seq_len, vocab_size, task
+            )
             test_loss, accuracy = evaluate(model, test_input, test_labels, criterion)
-            print(f"  Step {step:2d}/{num_steps}: Loss = {loss:.4f}, Test Loss = {test_loss:.4f}, Accuracy = {accuracy:.2%}")
+            print(
+                f"  Step {step:2d}/{num_steps}: Loss = {loss:.4f}, Test Loss = {test_loss:.4f}, Accuracy = {accuracy:.2%}"
+            )
 
     if initial_loss is not None:
-        final_test_input, final_test_labels = create_learnable_data(batch_size, seq_len, vocab_size, task)
-        final_loss, final_accuracy = evaluate(model, final_test_input, final_test_labels, criterion)
+        final_test_input, final_test_labels = create_learnable_data(
+            batch_size, seq_len, vocab_size, task
+        )
+        final_loss, final_accuracy = evaluate(
+            model, final_test_input, final_test_labels, criterion
+        )
         improvement = initial_loss - final_loss
         print(f"\n📈 Learning Progress:")
         print(f"  Initial Loss: {initial_loss:.4f}")
         print(f"  Final Loss: {final_loss:.4f}")
-        print(f"  Improvement: {improvement:.4f} ({improvement/initial_loss*100:.1f}% reduction)")
+        print(
+            f"  Improvement: {improvement:.4f} ({improvement/initial_loss*100:.1f}% reduction)"
+        )
         print(f"  Final Accuracy: {final_accuracy:.2%}")
 
     print("✅ Mamba 2 training completed!")
@@ -256,6 +287,7 @@ def main():
     print("✅ Mamba 1: SSM architecture, d_state=16")
     print("✅ Mamba 2: SSD architecture, d_state=64, multi-head")
     print("\n💡 Both architectures support full training with backpropagation!")
+
 
 if __name__ == "__main__":
     main()

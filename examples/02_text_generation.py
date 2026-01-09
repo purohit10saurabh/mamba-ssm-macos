@@ -19,8 +19,7 @@ from pathlib import Path
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from mamba_macos import (generate_text_with_model, get_device,
-                         load_and_prepare_model)
+from mamba_macos import generate_text_with_model, get_device, load_and_prepare_model
 
 
 def demo_model(model_name, prompts, model_dir="./models"):
