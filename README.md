@@ -202,9 +202,6 @@ mamba-ssm-macos/
 │   ├── 02_text_generation.py          # Text generation with pretrained models
 │   └── 03_training.py                 # Simple training example
 │
-├── ⚙️ config/                        # Configuration files
-│   └── pyproject.toml                # Python project config
-│
 ├── mamba_ssm/                        # Core implementation
 │   ├── models/                       # Model architectures
 │   ├── modules/                      # Model modules
