@@ -9,7 +9,7 @@
 
 ## Features
 
-- **Mamba 1 & 2 Support** - Inference of both architectures with pretrained models from Hugging Face
+- **Mamba 1 & 2 Support** - Training and inference of both architectures with examples of running pretrained models from Hugging Face
 - **Text Generation** - Coherent, contextual text generation 
 - **Apple Silicon Support** - MPS acceleration for M1/M2/M3/M4
 - **Dependency Management** - Works without CUDA/Triton requirements
@@ -22,18 +22,19 @@
 # 1. Clone and install
 git clone https://github.com/purohit10saurabh/mamba-ssm-macos.git
 cd mamba-ssm-macos
-uv sync
+uv sync 
+# If you are using pip instead of uv, run 'pip install -r requirements.txt' in a virtual env
 
 # 2. Download models 
-uv run python -m scripts.download_models mamba1    # Mamba 1 (493MB)
-uv run python -m scripts.download_models mamba2    # Mamba 2 (493MB) 
+python -m scripts.download_models mamba1    # Mamba 1 (493MB)
+python -m scripts.download_models mamba2    # Mamba 2 (493MB) 
 
 # 3. Generate text immediately  
 make run-mamba1                              # Quick Mamba 1 demo
 make run-mamba2                              # Quick Mamba 2 demo
-uv run python -m examples.01_core_modules # Core modules usage
-uv run python -m examples.02_text_generation # Text generation demo
-uv run python -m examples.03_training # Training example
+python -m examples.01_core_modules # Core modules usage
+python -m examples.02_text_generation # Text generation demo
+python -m examples.03_training # Training example
 ```
 
 ## Table of Contents
@@ -77,9 +78,10 @@ cd mamba-ssm-macos
 
 # Install dependencies (includes PyTorch with MPS support)
 uv sync
+# If you are using pip instead of uv, run 'pip install -r requirements.txt' in a virtual env
 
 # Verify MPS support
-uv run python -c "import torch; print('MPS Available:', torch.backends.mps.is_available())"
+python -c "import torch; print('MPS Available:', torch.backends.mps.is_available())"
 ```
 
 ### Download Models
@@ -91,8 +93,8 @@ make download-models  # Downloads both Mamba 1 & 2
 
 #### Individual Models
 ```bash
-uv run python -m scripts.download_models mamba1  # Mamba 1 (original)
-uv run python -m scripts.download_models mamba2  # Mamba 2 (latest)
+python -m scripts.download_models mamba1  # Mamba 1 (original)
+python -m scripts.download_models mamba2  # Mamba 2 (latest)
 ```
 
 ## Usage Examples
@@ -101,8 +103,8 @@ uv run python -m scripts.download_models mamba2  # Mamba 2 (latest)
 
 #### Quick Test
 ```bash
-uv run python -m examples.02_text_generation --interactive  # Try both models
-uv run python -m examples.02_text_generation --show-structure  # See organization
+python -m examples.02_text_generation --interactive  # Try both models
+python -m examples.02_text_generation --show-structure  # See organization
 ```
 
 #### Makefile Commands
@@ -118,18 +120,18 @@ make show-structure     # Show directory layout
 #### Mamba 1 & 2 via Scripts
 ```bash
 # Basic generation
-uv run python -m scripts.run_models mamba1 --prompt "The future of AI" --max-length 50
-uv run python -m scripts.run_models mamba2 --prompt "The future of AI" --max-length 30
+python -m scripts.run_models mamba1 --prompt "The future of AI" --max-length 50
+python -m scripts.run_models mamba2 --prompt "The future of AI" --max-length 30
 
 # Custom parameters
-uv run python -m scripts.run_models mamba1 --prompt "Once upon a time" --temperature 0.8
+python -m scripts.run_models mamba1 --prompt "Once upon a time" --temperature 0.8
 ```
 
 ### Learning Examples
 ```bash
-uv run python -m examples.01_core_modules      # Core modules usage
-uv run python -m examples.02_text_generation  # Text generation demo
-uv run python -m examples.03_training        # Training example
+python -m examples.01_core_modules      # Core modules usage
+python -m examples.02_text_generation  # Text generation demo
+python -m examples.03_training        # Training example
 ```
 
 ## Performance
@@ -209,50 +211,24 @@ mamba-ssm-macos/
 │   ├── utils/                        # Utilities
 │   └── distributed/                  # Distributed utilities
 │
-├── 📋 Makefile                       # Development commands
+├── 📋 Makefile                        # Development commands
 ├── 📋 pyproject.toml                 # Project configuration
-├── 📋 uv.toml                        # UV configuration
+├── 📋 uv.lock                        # Dependency lockfile
+├── 📋 requirements.txt               # Dependencies for installation with pip
 └── 📖 README.md                      # This file
 ```
 
-## Advanced Usage
-
-### Custom Model Configuration
+## Training Setup
+Check out `examples/03_training.py` for a full training example. Here's a snippet to get started:
 ```python
-# Mamba 2 custom config
-config = MambaConfig(
-    d_model=768,
-    n_layer=24,
-    d_state=128,           # Larger state space
-    headdim=64,           # Head dimension
-    expand=2,             # Expansion factor
-    ssm_cfg={"layer": "Mamba2", "d_state": 128},
-    vocab_size=50288
-)
+import torch
+from torch import nn
+from mamba_ssm.modules.mamba2_macos import Mamba2MacOS
 
-# Mamba 1 custom config  
-config = MambaConfig(
-    d_model=768,
-    n_layer=24,
-    d_state=16,           # Smaller state space
-    ssm_cfg={"layer": "Mamba1"},
-    vocab_size=50280
-)
-```
+# Define model
+model = nn.Sequential(nn.Embedding(1000, 128), *[Mamba2MacOS(d_model=128, d_state=64, d_conv=4, expand=2, headdim=64, ngroups=1, chunk_size=256, device='mps') for _ in range(2)], nn.LayerNorm(128), nn.Linear(128, 1000, bias=False)).to('mps')
 
-### Batch Processing
-```python
-prompts = ["Prompt 1", "Prompt 2", "Prompt 3"]
-for prompt in prompts:
-    # Process each prompt
-    inputs = tokenizer(prompt, return_tensors="pt")
-    outputs = model.generate(inputs.input_ids)
-    print(tokenizer.decode(outputs[0]))
-```
-
-### Fine-tuning Setup
-```python
-# Prepare for fine-tuning
+# Training setup
 model.train()
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
 
@@ -272,14 +248,14 @@ for batch in dataloader:
 ```bash
 # Download models using new structure
 make download-models                         # Both models
-uv run python -m scripts.download_models mamba1    # Mamba 1 only
-uv run python -m scripts.download_models mamba2    # Mamba 2 only
+python -m scripts.download_models mamba1    # Mamba 1 only
+python -m scripts.download_models mamba2    # Mamba 2 only
 ```
 
 #### ❌ "MPS not available"
 ```bash
 # Check MPS support
-uv run python -c "import torch; print(torch.backends.mps.is_available())"
+python -c "import torch; print(torch.backends.mps.is_available())"
 
 # If false, model will automatically use CPU
 ```
@@ -287,7 +263,7 @@ uv run python -c "import torch; print(torch.backends.mps.is_available())"
 #### ❌ Import errors
 ```bash
 # Use module structure
-uv run python -m examples.02_text_generation
+python -m examples.02_text_generation
 ```
 
 #### ❌ Slow generation
@@ -306,30 +282,21 @@ These are expected - we use optimized PyTorch fallbacks.
 ### Getting Help
 1. 📖 **Read the docs**: See this README for installation, usage examples, and troubleshooting
 2. 🧪 **Run tests**: `make test-quick` or `make test` 
-3. 🔍 **Check examples**: `uv run python -m examples.02_text_generation --show-structure`
+3. 🔍 **Check examples**: `python -m examples.02_text_generation --show-structure`
 4. 🐛 **Report issues**: Create GitHub issue with error details
 
 ## Learning Path
 
 ### Start Here (3 Steps)
 ```bash
-# 1. Download models
+# 1. Try training example
+python -m examples.03_training
+
+# 2. Download pretrained models
 make download-models
 
-# 2. Test basic functionality  
-make run-mamba1
-
-# 3. Explore interactively
-uv run python -m examples.02_text_generation
-```
-
-### Build Something
-```bash
-# Use Python API
-uv run python -m examples.01_core_modules
-
-# Custom generation
-uv run python -m scripts.run_models mamba1 --prompt "Your text"
+# 3. Infer with your own prompt
+python -m examples.02_text_generation --interactive
 ```
 
 ## Technical Details
@@ -444,4 +411,4 @@ Apache 2.0 License - see [LICENSE](LICENSE) file.
 
 **Optimized for Apple Silicon • Pure Python • High-Performance**
 
-*Start with `uv run python -m examples.01_core_modules` and explore from there!* ⬆️
+*Start with `python -m examples.03_training` and explore from there!* ⬆️

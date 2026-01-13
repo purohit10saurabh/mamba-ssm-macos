@@ -1,0 +1,12 @@
+# Core dependencies
+torch>=2.0.0
+transformers>=4.30.0
+numpy>=1.21.0
+einops>=0.7.0
+
+# Hugging Face Hub for model downloads
+huggingface-hub>=0.16.0
+
+# Development dependencies
+black>=23.0.0
+isort>=5.12.0
