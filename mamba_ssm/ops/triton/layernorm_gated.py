@@ -16,11 +16,6 @@ try:
     has_triton = True
 except ImportError:
     has_triton = False
-    import warnings
-
-    warnings.warn(
-        "Triton is not available. Using slower PyTorch implementation for layernorm_gated."
-    )
 
 from einops import rearrange
 
