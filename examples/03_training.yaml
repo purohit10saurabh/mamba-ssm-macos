@@ -1,0 +1,35 @@
+training:
+  task: shift
+  seed: 42
+  lr: 0.001
+  num_steps: 100
+  seq_len: 32
+  vocab_size: 100
+  batch_size: 8
+  eval_batches: 10
+  eval_every_steps: 5
+
+layer_config:
+  d_conv: 4
+  expand: 2
+  ngroups: 1
+  chunk_size: 256
+
+models:
+  mamba1:
+    title: Mamba 1 (SSM Architecture)
+    model:
+      _target_: examples.03_training.SimpleMambaLM
+      vocab_size: ${training.vocab_size}
+      d_model: 128
+      d_state: 16
+      n_layers: 2
+  mamba2:
+    title: Mamba 2 (SSD Architecture)
+    model:
+      _target_: examples.03_training.SimpleMamba2LM
+      vocab_size: ${training.vocab_size}
+      d_model: 128
+      d_state: 64
+      n_layers: 2
+      headdim: 64

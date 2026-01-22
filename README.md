@@ -157,24 +157,18 @@ make test-quick
 
 ## Generated Examples
 
-### Mamba 2 (SSD Architecture)
-```
-"The future of artificial intelligence is a big topic in the field of artificial intelligence."
-
-"Once upon a time, there was a man named John."
-
-"Python is a programming language that is used to create and manipulate objects."
-
-"The capital of France is a city of the French, and the"
-```
-
 ### Mamba 1 (SSM Architecture)
 ```
-"The future of AI is not in limited solipsistic computing, but in densely-connected 
-    and much richer data. In the next decade, we may be able to take advantage..."
+"[The future of AI] is far from clear, and is likely to be even more expansive than in the past. The question is whether AI will help us..."
 
-"Once upon a time, in a land far away, there lived one lonely woman, who was 
-    much respected among wolves. She resided at a rendezvous called Buguqrach..."
+"[Once upon a time], there was an old lady. She was a long-haired old lady, who could not even leave the house to meet..."
+```
+
+### Mamba 2 (SSD Architecture)
+```
+"[The future of AI] in healthcare. The role of AI in the healthcare system has been growing, and the need exists for appropriate forms of AI for..."
+
+"[Once upon a time], there was a whole other time. The time of the mad, the time of the high, the time of the great..."
 ```
 
 ## Repository Structure
@@ -225,17 +219,14 @@ import torch
 from torch import nn
 from mamba_ssm.modules.mamba2_macos import Mamba2MacOS
 
-# Define model
 model = nn.Sequential(nn.Embedding(1000, 128), *[Mamba2MacOS(d_model=128, d_state=64, d_conv=4, expand=2, headdim=64, ngroups=1, chunk_size=256, device='mps') for _ in range(2)], nn.LayerNorm(128), nn.Linear(128, 1000, bias=False)).to('mps')
-
-# Training setup
-model.train()
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
+criterion = nn.CrossEntropyLoss()
 
-# Your training loop here
-for batch in dataloader:
-    outputs = model(batch['input_ids'], labels=batch['labels'])
-    loss = outputs.loss
+for input_ids, labels in dataloader:
+    optimizer.zero_grad()
+    logits = model(input_ids)
+    loss = criterion(logits.view(-1, logits.size(-1)), labels.view(-1))
     loss.backward()
     optimizer.step()
 ```
