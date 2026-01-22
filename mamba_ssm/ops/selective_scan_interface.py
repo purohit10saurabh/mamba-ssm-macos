@@ -40,12 +40,6 @@ try:
     has_cuda_support = True
 except ImportError:
     has_cuda_support = False
-    # Create a warning that CUDA extensions are not available
-    import warnings
-
-    warnings.warn(
-        "selective_scan_cuda module is not available. Using slow reference implementation."
-    )
 
 
 class SelectiveScanFn(torch.autograd.Function):
