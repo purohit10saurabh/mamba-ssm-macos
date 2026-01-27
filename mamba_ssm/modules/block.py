@@ -16,7 +16,13 @@ class Block(nn.Module):
         else:
             self.mlp = None
 
-    def forward(self, hidden_states: Tensor, residual: Optional[Tensor] = None, inference_params=None, **mixer_kwargs):
+    def forward(
+        self,
+        hidden_states: Tensor,
+        residual: Optional[Tensor] = None,
+        inference_params=None,
+        **mixer_kwargs,
+    ):
         residual = (hidden_states + residual) if residual is not None else hidden_states
         hidden_states = self.norm(residual.to(dtype=self.norm.weight.dtype))
         if self.residual_in_fp32:

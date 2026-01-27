@@ -1,4 +1,4 @@
-.PHONY: install install-dev test test-unit test-integration test-quick clean download-models run-mamba1 run-mamba2 format show-structure help
+.PHONY: install install-dev test test-unit test-integration test-quick clean download-models run-mamba1 run-mamba2 format format-check pre-commit show-structure help
 
 # Default Python command
 PYTHON := uv run python
@@ -12,7 +12,7 @@ install:
 test: test-unit test-integration
 
 test-unit:
-	$(PYTHON) -m tests.run_all_tests
+	$(PYTHON) -m tests.run_unit_tests
 
 test-integration:
 	$(PYTHON) -m tests.integration.test_unified_system
@@ -41,18 +41,24 @@ clean:
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
 
 format:
-	uv run black src/ scripts/ tests/
-	uv run isort src/ scripts/ tests/
+	uv run black mamba_ssm/ scripts/ tests/ examples/
+	uv run isort mamba_ssm/ scripts/ tests/ examples/
+
+format-check:
+	uv run black --check mamba_ssm/ scripts/ tests/ examples/
+	uv run isort --check-only mamba_ssm/ scripts/ tests/ examples/
+
+pre-commit:
+	uv run pre-commit install
 
 # Documentation
 show-structure:
 	@echo "📚 Project structure:"
-	@echo "src/mamba_macos/     - Core library code"
+	@echo "mamba_ssm/           - Core library code"
 	@echo "scripts/             - Utility scripts"
 	@echo "tests/unit/          - Unit tests"
 	@echo "tests/integration/   - Integration tests"
 	@echo "examples/            - Usage examples"
-	@echo "models/              - Downloaded models"
 
 help:
 	@echo "Available commands:"
@@ -66,4 +72,6 @@ help:
 	@echo "  run-mamba2        - Run Mamba2 model demo"
 	@echo "  clean             - Clean up cache files"
 	@echo "  format            - Format code with black and isort"
+	@echo "  format-check      - Check code formatting without changes"
+	@echo "  pre-commit        - Install pre-commit hooks"
 	@echo "  show-structure    - Show project structure" 

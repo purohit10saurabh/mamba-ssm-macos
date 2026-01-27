@@ -15,9 +15,7 @@ try:
 except ImportError:
 
     class RMSNormGated(nn.Module):
-        def __init__(
-            self, d, eps=1e-5, norm_before_gate=False, device=None, dtype=None
-        ):
+        def __init__(self, d, eps=1e-5, norm_before_gate=False, device=None, dtype=None):
             super().__init__()
             self.eps = eps
             self.norm_before_gate = norm_before_gate
@@ -84,9 +82,7 @@ except ImportError:
         return y
 
     def mamba_split_conv1d_scan_combined(*args, **kwargs):
-        raise NotImplementedError(
-            "Reference implementation not available for split conv1d scan"
-        )
+        raise NotImplementedError("Reference implementation not available for split conv1d scan")
 
 
 class Mamba2(nn.Module):
@@ -166,8 +162,7 @@ class Mamba2(nn.Module):
         self.act = nn.SiLU()
 
         dt = torch.exp(
-            torch.rand(self.nheads, **factory_kwargs)
-            * (math.log(dt_max) - math.log(dt_min))
+            torch.rand(self.nheads, **factory_kwargs) * (math.log(dt_max) - math.log(dt_min))
             + math.log(dt_min)
         )
         dt = torch.clamp(dt, min=dt_init_floor)
@@ -175,21 +170,15 @@ class Mamba2(nn.Module):
         self.dt_bias = nn.Parameter(inv_dt)
         self.dt_bias._no_weight_decay = True
 
-        A = torch.empty(self.nheads, dtype=torch.float32, device=device).uniform_(
-            *A_init_range
-        )
+        A = torch.empty(self.nheads, dtype=torch.float32, device=device).uniform_(*A_init_range)
         self.A_log = nn.Parameter(torch.log(A).to(dtype=dtype))
         self.A_log._no_weight_decay = True
 
         self.D = nn.Parameter(torch.ones(self.nheads, device=device))
         self.D._no_weight_decay = True
 
-        self.norm = RMSNormGated(
-            self.d_inner, eps=1e-5, norm_before_gate=False, **factory_kwargs
-        )
-        self.out_proj = nn.Linear(
-            self.d_inner, self.d_model, bias=bias, **factory_kwargs
-        )
+        self.norm = RMSNormGated(self.d_inner, eps=1e-5, norm_before_gate=False, **factory_kwargs)
+        self.out_proj = nn.Linear(self.d_inner, self.d_model, bias=bias, **factory_kwargs)
 
     def forward(self, u, seq_idx=None, inference_params=None, **kwargs):
         batch, seqlen, dim = u.shape
@@ -237,9 +226,7 @@ class Mamba2(nn.Module):
         dt = F.softplus(dt + self.dt_bias)
 
         if causal_conv1d_fn is None or self.activation not in ["silu", "swish"]:
-            xBC = self.act(self.conv1d(xBC.transpose(1, 2)).transpose(1, 2))[
-                :, :seqlen, :
-            ]
+            xBC = self.act(self.conv1d(xBC.transpose(1, 2)).transpose(1, 2))[:, :seqlen, :]
         else:
             xBC = causal_conv1d_fn(
                 xBC.transpose(1, 2),
