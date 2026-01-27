@@ -59,9 +59,7 @@ def demo_mamba2(device):
     conv_state, ssm_state = block.allocate_inference_cache(8, 1024)
     x_step = input_features[:, :1, :]
     with torch.no_grad():
-        y_step, new_conv_state, new_ssm_state = block.step(
-            x_step, conv_state, ssm_state
-        )
+        y_step, new_conv_state, new_ssm_state = block.step(x_step, conv_state, ssm_state)
     print(f"Step input:  {x_step.shape}")
     print(f"Step output: {y_step.shape}")
     print("✅ Step function successful!")

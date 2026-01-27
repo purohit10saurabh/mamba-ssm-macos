@@ -7,15 +7,17 @@ sys.path.append(str(Path(__file__).parent.parent))
 from tests.unit.test_generation_macos import run_generation_tests
 from tests.unit.test_mamba2_macos import run_mamba2_tests
 from tests.unit.test_mamba_macos import run_mamba_tests
+from tests.unit.test_selective_scan_gradients import run_selective_scan_gradient_tests
 
 
-def run_all_tests():
-    print("🚀 Starting comprehensive test suite...")
+def run_unit_tests():
+    print("🚀 Starting unit test suite...")
 
     test_modules = [
         ("Mamba macOS Tests", run_mamba_tests),
         ("Mamba2 macOS Tests", run_mamba2_tests),
         ("Generation macOS Tests", run_generation_tests),
+        ("Selective Scan Gradient Tests", run_selective_scan_gradient_tests),
     ]
 
     results = {}
@@ -49,15 +51,15 @@ def run_all_tests():
     print(f"\nOverall: {passed}/{total} test modules passed")
 
     if passed == total:
-        print("🎉 ALL TESTS PASSED!")
+        print("🎉 All unit tests passed!")
         return True
     else:
-        print("❌ Some tests failed")
+        print("❌ Some unit tests failed")
         return False
 
 
 def main():
-    success = run_all_tests()
+    success = run_unit_tests()
     sys.exit(0 if success else 1)
 
 

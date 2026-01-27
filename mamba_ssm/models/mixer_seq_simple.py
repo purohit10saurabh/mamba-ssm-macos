@@ -19,6 +19,7 @@ from mamba_ssm.modules.mlp import GatedMLP
 from mamba_ssm.utils.generation import GenerationMixin
 from mamba_ssm.utils.hf import load_config_hf, load_state_dict_hf
 
+
 def create_block(
     d_model,
     d_intermediate,
@@ -43,9 +44,7 @@ def create_block(
         ssm_cfg = copy.deepcopy(ssm_cfg) if ssm_cfg is not None else {}
         ssm_layer = ssm_cfg.pop("layer", "Mamba1")
         if ssm_layer not in ["Mamba1", "Mamba2"]:
-            raise ValueError(
-                f"Invalid ssm_layer: {ssm_layer}, only support Mamba1 and Mamba2"
-            )
+            raise ValueError(f"Invalid ssm_layer: {ssm_layer}, only support Mamba1 and Mamba2")
 
         if ssm_layer == "Mamba2":
             mixer_cls = partial(Mamba2, layer_idx=layer_idx, **ssm_cfg, **factory_kwargs)
@@ -150,17 +149,13 @@ class MixerModel(nn.Module):
                 _init_weights,
                 n_layer=n_layer,
                 **(initializer_cfg if initializer_cfg is not None else {}),
-                n_residuals_per_layer=(
-                    1 if d_intermediate == 0 else 2
-                ),  # 2 if we have MLP
+                n_residuals_per_layer=(1 if d_intermediate == 0 else 2),  # 2 if we have MLP
             )
         )
 
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None, **kwargs):
         return {
-            i: layer.allocate_inference_cache(
-                batch_size, max_seqlen, dtype=dtype, **kwargs
-            )
+            i: layer.allocate_inference_cache(batch_size, max_seqlen, dtype=dtype, **kwargs)
             for i, layer in enumerate(self.layers)
         }
 
@@ -168,7 +163,9 @@ class MixerModel(nn.Module):
         hidden_states = self.embedding(input_ids)
         residual = None
         for layer in self.layers:
-            hidden_states, residual = layer(hidden_states, residual, inference_params=inference_params, **mixer_kwargs)
+            hidden_states, residual = layer(
+                hidden_states, residual, inference_params=inference_params, **mixer_kwargs
+            )
         residual = (hidden_states + residual) if residual is not None else hidden_states
         hidden_states = self.norm_f(residual.to(dtype=self.norm_f.weight.dtype))
         return hidden_states
@@ -181,7 +178,9 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
         super().__init__()
         vocab_size = config.vocab_size
         if vocab_size % config.pad_vocab_size_multiple != 0:
-            vocab_size += config.pad_vocab_size_multiple - (vocab_size % config.pad_vocab_size_multiple)
+            vocab_size += config.pad_vocab_size_multiple - (
+                vocab_size % config.pad_vocab_size_multiple
+            )
         self.backbone = MixerModel(
             d_model=config.d_model,
             n_layer=config.n_layer,
@@ -195,7 +194,13 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
             **factory_kwargs,
         )
         self.lm_head = nn.Linear(config.d_model, vocab_size, bias=False, **factory_kwargs)
-        self.apply(partial(_init_weights, n_layer=config.n_layer, **(initializer_cfg if initializer_cfg is not None else {})))
+        self.apply(
+            partial(
+                _init_weights,
+                n_layer=config.n_layer,
+                **(initializer_cfg if initializer_cfg is not None else {}),
+            )
+        )
         self.tie_weights()
 
     def tie_weights(self):
@@ -203,9 +208,7 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
             self.lm_head.weight = self.backbone.embedding.weight
 
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None, **kwargs):
-        return self.backbone.allocate_inference_cache(
-            batch_size, max_seqlen, dtype=dtype, **kwargs
-        )
+        return self.backbone.allocate_inference_cache(batch_size, max_seqlen, dtype=dtype, **kwargs)
 
     def forward(
         self,
@@ -219,9 +222,7 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
         "position_ids" is just to be compatible with Transformer generation. We don't use it.
         num_last_tokens: if > 0, only return the logits for the last n tokens
         """
-        hidden_states = self.backbone(
-            input_ids, inference_params=inference_params, **mixer_kwargs
-        )
+        hidden_states = self.backbone(input_ids, inference_params=inference_params, **mixer_kwargs)
         if num_last_tokens > 0:
             hidden_states = hidden_states[:, -num_last_tokens:]
         lm_logits = self.lm_head(hidden_states)
@@ -233,9 +234,7 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
         config_data = load_config_hf(pretrained_model_name)
         config = MambaConfig(**config_data)
         model = cls(config, device=device, dtype=dtype, **kwargs)
-        model.load_state_dict(
-            load_state_dict_hf(pretrained_model_name, device=device, dtype=dtype)
-        )
+        model.load_state_dict(load_state_dict_hf(pretrained_model_name, device=device, dtype=dtype))
         return model
 
     def save_pretrained(self, save_directory):
