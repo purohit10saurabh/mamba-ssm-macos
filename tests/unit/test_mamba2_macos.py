@@ -37,7 +37,9 @@ class TestMamba2(unittest.TestCase):
         d_model, d_state, batch_size, seq_len = 192, 48, 2, 16
         for headdim in [32, 48, 64]:
             with self.subTest(headdim=headdim):
-                model = Mamba2(d_model=d_model, d_state=d_state, headdim=headdim, d_conv=4, expand=2)
+                model = Mamba2(
+                    d_model=d_model, d_state=d_state, headdim=headdim, d_conv=4, expand=2
+                )
                 expected_nheads = model.d_inner // headdim
                 self.assertEqual(model.nheads, expected_nheads)
                 x = torch.randn(batch_size, seq_len, d_model)
@@ -67,7 +69,13 @@ class TestMamba2(unittest.TestCase):
         ]
         for config in test_configs:
             with self.subTest(**config):
-                model = Mamba2(d_model=config["d_model"], d_state=config["d_state"], headdim=config["headdim"], d_conv=4, expand=2)
+                model = Mamba2(
+                    d_model=config["d_model"],
+                    d_state=config["d_state"],
+                    headdim=config["headdim"],
+                    d_conv=4,
+                    expand=2,
+                )
                 x = torch.randn(1, 4, config["d_model"])
                 out = model(x)
                 self.assertEqual(out.shape, (1, 4, config["d_model"]))

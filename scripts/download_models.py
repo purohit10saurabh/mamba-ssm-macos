@@ -92,12 +92,8 @@ def download_model(model_type, model_dir):
 
 def main():
     parser = argparse.ArgumentParser(description="Download Mamba models")
-    parser.add_argument(
-        "model", choices=["mamba1", "mamba2", "both"], help="Model to download"
-    )
-    parser.add_argument(
-        "--model-dir", default="./models", help="Downloaded models directory"
-    )
+    parser.add_argument("model", choices=["mamba1", "mamba2", "both"], help="Model to download")
+    parser.add_argument("--model-dir", default="./models", help="Downloaded models directory")
     args = parser.parse_args()
 
     try:

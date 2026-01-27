@@ -188,7 +188,7 @@ mamba-ssm-macos/
 ├── 🧪 tests/                         # Test suite  
 │   ├── unit/                         # Component tests
 │   ├── integration/                  # End-to-end tests
-│   └── run_all_tests.py              # Test runner
+│   └── run_unit_tests.py              # Test runner
 │
 ├── 📚 examples/                      # Usage examples
 │   ├── 01_core_modules.py            # Core modules demo
