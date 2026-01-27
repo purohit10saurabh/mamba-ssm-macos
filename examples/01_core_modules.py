@@ -3,12 +3,12 @@
 Basic Core Modules Usage Example
 
 Demonstrates fundamental usage patterns for core Mamba modules on Apple Silicon.
-Shows both Mamba 1 (Mamba) and Mamba 2 (Mamba2MacOS) architectures.
+Shows both Mamba 1 (Mamba) and Mamba 2 (Mamba2) architectures.
 """
 
 import torch
 
-from mamba_ssm.modules.mamba2_macos import Mamba2MacOS
+from mamba_ssm.modules.mamba2 import Mamba2
 from mamba_ssm.modules.mamba_simple import Mamba
 
 
@@ -37,7 +37,7 @@ def demo_mamba1(device):
 def demo_mamba2(device):
     print("\n🔶 Mamba 2 (SSD Architecture)")
     print("=" * 40)
-    block = Mamba2MacOS(
+    block = Mamba2(
         d_model=512,
         d_state=64,
         d_conv=4,

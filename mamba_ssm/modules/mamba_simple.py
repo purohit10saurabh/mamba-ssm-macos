@@ -1,13 +1,9 @@
-# Copyright (c) 2023, Tri Dao, Albert Gu.
-
 import math
-from typing import Optional
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange, repeat
-from torch import Tensor
 
 from mamba_ssm.ops.selective_scan_interface import mamba_inner_fn, selective_scan_fn
 
@@ -15,16 +11,6 @@ try:
     from causal_conv1d import causal_conv1d_fn, causal_conv1d_update
 except ImportError:
     causal_conv1d_fn, causal_conv1d_update = None, None
-
-try:
-    from mamba_ssm.ops.triton.selective_state_update import selective_state_update
-except ImportError:
-    selective_state_update = None
-
-try:
-    from mamba_ssm.ops.triton.layer_norm import RMSNorm, layer_norm_fn, rms_norm_fn
-except ImportError:
-    RMSNorm, layer_norm_fn, rms_norm_fn = None, None, None
 
 
 class Mamba(nn.Module):
@@ -254,30 +240,13 @@ class Mamba(nn.Module):
         dt = F.linear(dt, self.dt_proj.weight)  # (B d_inner)
         A = -torch.exp(self.A_log.float())  # (d_inner, d_state)
 
-        # SSM step
-        if selective_state_update is None:
-            # Discretize A and B
-            dt = F.softplus(dt + self.dt_proj.bias.to(dtype=dt.dtype))
-            dA = torch.exp(torch.einsum("bd,dn->bdn", dt, A))
-            dB = torch.einsum("bd,bn->bdn", dt, B)
-            ssm_state.copy_(ssm_state * dA + rearrange(x, "b d -> b d 1") * dB)
-            y = torch.einsum("bdn,bn->bd", ssm_state.to(dtype), C)
-            y = y + self.D.to(dtype) * x
-            y = y * self.act(z)  # (B D)
-        else:
-            y = selective_state_update(
-                ssm_state,
-                x,
-                dt,
-                A,
-                B,
-                C,
-                self.D,
-                z=z,
-                dt_bias=self.dt_proj.bias,
-                dt_softplus=True,
-            )
-
+        dt = F.softplus(dt + self.dt_proj.bias.to(dtype=dt.dtype))
+        dA = torch.exp(torch.einsum("bd,dn->bdn", dt, A))
+        dB = torch.einsum("bd,bn->bdn", dt, B)
+        ssm_state.copy_(ssm_state * dA + rearrange(x, "b d -> b d 1") * dB)
+        y = torch.einsum("bdn,bn->bd", ssm_state.to(dtype), C)
+        y = y + self.D.to(dtype) * x
+        y = y * self.act(z)
         out = self.out_proj(y)
         return out.unsqueeze(1), conv_state, ssm_state
 

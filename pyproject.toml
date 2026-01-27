@@ -8,12 +8,10 @@ managed = true
 [project]
 name = "mamba-ssm-macos"
 version = "0.1.0"
-description = "Mamba2MacOS - State Space Models optimized for Apple Silicon"
+description = "Mamba SSM - State Space Models optimized for Apple Silicon"
 readme = "README.md"
 authors = [
   { name = "Saurabh Purohit", email = "saurabh97purohit@gmail.com" },
-  { name = "Tri Dao" },
-  { name = "Albert Gu" },
 ]
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
@@ -51,11 +49,9 @@ Repository = "https://github.com/purohit10saurabh/mamba-ssm-macos"
 [tool.setuptools]
 packages = [
   "mamba_ssm",
-  "mamba_ssm.distributed",
   "mamba_ssm.models",
   "mamba_ssm.modules",
   "mamba_ssm.ops",
-  "mamba_ssm.ops.triton",
   "mamba_ssm.utils",
   "mamba_macos",
 ]

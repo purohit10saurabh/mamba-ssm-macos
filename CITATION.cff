@@ -1,14 +1,10 @@
 cff-version: 1.2.0
 type: software
-title: "Mamba for macOS Apple Silicon: Optimized Implementation"
+title: "Mamba SSM for macOS Apple Silicon"
 authors:
   - family-names: Purohit
     given-names: Saurabh
     email: saurabh97purohit@gmail.com
-  - family-names: Dao
-    given-names: Tri
-  - family-names: Gu
-    given-names: Albert
 repository-code: "https://github.com/purohit10saurabh/mamba-ssm-macos"
 url: "https://github.com/purohit10saurabh/mamba-ssm-macos"
 version: 0.1.0
@@ -22,4 +18,23 @@ keywords:
   - mps
   - deep-learning
   - language-models
-message: "If you use this software, please cite it using the metadata from this file."
+message: "If you use this software, please cite it and the original Mamba papers."
+references:
+  - type: article
+    title: "Mamba: Linear-Time Sequence Modeling with Selective State Spaces"
+    authors:
+      - family-names: Gu
+        given-names: Albert
+      - family-names: Dao
+        given-names: Tri
+    year: 2023
+    url: "https://arxiv.org/abs/2312.00752"
+  - type: article
+    title: "Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality"
+    authors:
+      - family-names: Dao
+        given-names: Tri
+      - family-names: Gu
+        given-names: Albert
+    year: 2024
+    url: "https://arxiv.org/abs/2405.21060"

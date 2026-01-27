@@ -1,4 +1,3 @@
-# Copyright (c) 2024, Tri Dao, Albert Gu.
 from torch import nn
 from torch.nn import functional as F
 
