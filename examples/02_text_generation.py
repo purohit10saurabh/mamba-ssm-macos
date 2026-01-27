@@ -12,14 +12,9 @@ Features:
 """
 
 import argparse
-import sys
 import time
-from pathlib import Path
 
-# Add src to path
-sys.path.append(str(Path(__file__).parent.parent / "src"))
-
-from mamba_macos import generate_text_with_model, get_device, load_and_prepare_model
+from mamba_ssm import generate_text_with_model, get_device, load_and_prepare_model
 
 
 def demo_model(model_name, prompts, model_dir="./models"):
@@ -134,10 +129,9 @@ def showcase_structure():
     print("=" * 50)
 
     structure_info = [
-        ("📦 src/mamba_macos/", "Core library"),
+        ("📦 mamba_ssm/", "Core library"),
         ("🔧 scripts/", "Utility scripts (download, run models)"),
-        ("🧪 tests/unit/", "Component-level unit tests"),
-        ("🧪 tests/integration/", "End-to-end integration tests"),
+        ("🧪 tests/", "Unit and integration tests"),
         ("📚 examples/", "Usage examples and demos"),
         ("🤖 models/", "Downloaded model files"),
     ]
@@ -147,8 +141,7 @@ def showcase_structure():
 
     print(f"\n🎯 Key Benefits:")
     print("✅ Clean separation of concerns")
-    print("✅ Professional Python package structure")
-    print("✅ Easy imports: from mamba_macos import ...")
+    print("✅ Easy imports: from mamba_ssm import ...")
     print("✅ Organized tests (unit + integration)")
     print("✅ Makefile for common development tasks")
 

@@ -175,41 +175,29 @@ make test-quick
 
 ```
 mamba-ssm-macos/
-├── 📦 src/mamba_macos/               # Core library
-│   ├── __init__.py                   # Package exports
-│   ├── utils.py                      # Device, tokenizer, generation
-│   └── models.py                     # Model loading & preparation
+├── 📦 mamba_ssm/                     # Core library
+│   ├── models/                       # Model architectures
+│   ├── modules/                      # Mamba1, Mamba2 modules
+│   ├── ops/                          # Selective scan operations
+│   └── utils/                        # Generation, loading utilities
 │
 ├── 🔧 scripts/                       # Utility scripts
-│   ├── download_models.py            # Download both models
-│   └── run_models.py                 # Run models with arguments
+│   ├── download_models.py            # Download models
+│   └── run_models.py                 # Run models CLI
 │
 ├── 🧪 tests/                         # Test suite  
-│   ├── unit/                         # Component-level tests
-│   │   ├── test_mamba_macos.py       # Mamba 1 unit tests
-│   │   ├── test_mamba2_macos.py      # Mamba 2 unit tests
-│   │   └── test_generation_macos.py  # Generation tests
+│   ├── unit/                         # Component tests
 │   ├── integration/                  # End-to-end tests
-│   │   └── test_unified_system.py    # Complete workflow tests
 │   └── run_all_tests.py              # Test runner
 │
-├── 📚 examples/                       # Curated examples
-│   ├── 01_core_modules.py             # Core modules usage (Mamba 1 & 2)
-│   ├── 02_text_generation.py          # Text generation with pretrained models
-│   └── 03_training.py                 # Simple training example
+├── 📚 examples/                      # Usage examples
+│   ├── 01_core_modules.py            # Core modules demo
+│   ├── 02_text_generation.py         # Text generation demo
+│   └── 03_training.py                # Training example
 │
-├── mamba_ssm/                        # Core implementation
-│   ├── models/                       # Model architectures
-│   ├── modules/                      # Model modules
-│   ├── ops/                          # Operations (CPU/Triton fallbacks)
-│   ├── utils/                        # Utilities
-│   └── distributed/                  # Distributed utilities
-│
-├── 📋 Makefile                        # Development commands
-├── 📋 pyproject.toml                 # Project configuration
-├── 📋 uv.lock                        # Dependency lockfile
-├── 📋 requirements.txt               # Dependencies for installation with pip
-└── 📖 README.md                      # This file
+├── 📋 Makefile                       # Dev commands
+├── 📋 pyproject.toml                 # Project config
+└── 📖 README.md                      # Documentation
 ```
 
 ## Training Setup

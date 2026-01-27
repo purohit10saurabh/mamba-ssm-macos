@@ -9,13 +9,11 @@ from pathlib import Path
 import numpy as np
 import torch
 
-sys.path.append(str(Path(__file__).parent.parent.parent / "src"))
 sys.path.append(str(Path(__file__).parent.parent.parent / "scripts"))
 
 from download_models import download_model
 
-from mamba_macos import (generate_text_with_model, get_device,
-                         load_and_prepare_model)
+from mamba_ssm import generate_text_with_model, get_device, load_and_prepare_model
 
 
 def set_seed(s=42):

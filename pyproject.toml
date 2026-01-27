@@ -53,8 +53,4 @@ packages = [
   "mamba_ssm.modules",
   "mamba_ssm.ops",
   "mamba_ssm.utils",
-  "mamba_macos",
 ]
-
-[tool.setuptools.package-dir]
-"mamba_macos" = "src/mamba_macos"
