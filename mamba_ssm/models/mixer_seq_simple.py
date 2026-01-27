@@ -19,9 +19,6 @@ from mamba_ssm.modules.mlp import GatedMLP
 from mamba_ssm.utils.generation import GenerationMixin
 from mamba_ssm.utils.hf import load_config_hf, load_state_dict_hf
 
-RMSNorm = None
-
-
 def create_block(
     d_model,
     d_intermediate,
@@ -29,9 +26,7 @@ def create_block(
     attn_layer_idx=None,
     attn_cfg=None,
     norm_epsilon=1e-5,
-    rms_norm=False,
     residual_in_fp32=False,
-    fused_add_norm=False,
     layer_idx=None,
     device=None,
     dtype=None,
@@ -58,11 +53,7 @@ def create_block(
             mixer_cls = partial(Mamba, layer_idx=layer_idx, **ssm_cfg, **factory_kwargs)
     else:
         mixer_cls = partial(MHA, layer_idx=layer_idx, **attn_cfg, **factory_kwargs)
-    if rms_norm and RMSNorm is not None:
-        norm_cls = partial(RMSNorm, eps=norm_epsilon, **factory_kwargs)
-    else:
-        # Fall back to LayerNorm if RMSNorm is not available or not requested
-        norm_cls = partial(nn.LayerNorm, eps=norm_epsilon, **factory_kwargs)
+    norm_cls = partial(nn.LayerNorm, eps=norm_epsilon, **factory_kwargs)
     if d_intermediate == 0:
         mlp_cls = nn.Identity
     else:
@@ -77,7 +68,6 @@ def create_block(
         mixer_cls,
         mlp_cls,
         norm_cls=norm_cls,
-        fused_add_norm=fused_add_norm,
         residual_in_fp32=residual_in_fp32,
     )
     block.layer_idx = layer_idx
@@ -128,9 +118,7 @@ class MixerModel(nn.Module):
         attn_layer_idx=None,
         attn_cfg=None,
         norm_epsilon: float = 1e-5,
-        rms_norm: bool = False,
         initializer_cfg=None,
-        fused_add_norm=False,
         residual_in_fp32=False,
         device=None,
         dtype=None,
@@ -138,19 +126,7 @@ class MixerModel(nn.Module):
         factory_kwargs = {"device": device, "dtype": dtype}
         super().__init__()
         self.residual_in_fp32 = residual_in_fp32
-
         self.embedding = nn.Embedding(vocab_size, d_model, **factory_kwargs)
-
-        # We change the order of residual and layer norm:
-        # Instead of LN -> Attn / MLP -> Add, we do:
-        # Add -> LN -> Attn / MLP / Mixer, returning both the residual branch (output of Add) and
-        # the main branch (output of MLP / Mixer). The model definition is unchanged.
-        # This is for performance reason: we can fuse add + layer_norm.
-        self.fused_add_norm = fused_add_norm
-        if self.fused_add_norm:
-            if layer_norm_fn is None or rms_norm_fn is None:
-                raise ImportError("Failed to import Triton LayerNorm / RMSNorm kernels")
-
         self.layers = nn.ModuleList(
             [
                 create_block(
@@ -160,21 +136,14 @@ class MixerModel(nn.Module):
                     attn_layer_idx=attn_layer_idx,
                     attn_cfg=attn_cfg,
                     norm_epsilon=norm_epsilon,
-                    rms_norm=rms_norm,
                     residual_in_fp32=residual_in_fp32,
-                    fused_add_norm=fused_add_norm,
                     layer_idx=i,
                     **factory_kwargs,
                 )
                 for i in range(n_layer)
             ]
         )
-
-        if rms_norm and RMSNorm is not None:
-            self.norm_f = RMSNorm(d_model, eps=norm_epsilon, **factory_kwargs)
-        else:
-            # Fall back to LayerNorm if RMSNorm is not available or not requested
-            self.norm_f = nn.LayerNorm(d_model, eps=norm_epsilon, **factory_kwargs)
+        self.norm_f = nn.LayerNorm(d_model, eps=norm_epsilon, **factory_kwargs)
 
         self.apply(
             partial(
@@ -199,84 +168,34 @@ class MixerModel(nn.Module):
         hidden_states = self.embedding(input_ids)
         residual = None
         for layer in self.layers:
-            hidden_states, residual = layer(
-                hidden_states,
-                residual,
-                inference_params=inference_params,
-                **mixer_kwargs,
-            )
-        if not self.fused_add_norm:
-            residual = (
-                (hidden_states + residual) if residual is not None else hidden_states
-            )
-            hidden_states = self.norm_f(residual.to(dtype=self.norm_f.weight.dtype))
-        else:
-            # Set prenorm=False here since we don't need the residual
-            hidden_states = layer_norm_fn(
-                hidden_states,
-                self.norm_f.weight,
-                self.norm_f.bias,
-                eps=self.norm_f.eps,
-                residual=residual,
-                prenorm=False,
-                residual_in_fp32=self.residual_in_fp32,
-                is_rms_norm=isinstance(self.norm_f, RMSNorm),
-            )
+            hidden_states, residual = layer(hidden_states, residual, inference_params=inference_params, **mixer_kwargs)
+        residual = (hidden_states + residual) if residual is not None else hidden_states
+        hidden_states = self.norm_f(residual.to(dtype=self.norm_f.weight.dtype))
         return hidden_states
 
 
 class MambaLMHeadModel(nn.Module, GenerationMixin):
-
-    def __init__(
-        self,
-        config: MambaConfig,
-        initializer_cfg=None,
-        device=None,
-        dtype=None,
-    ) -> None:
+    def __init__(self, config: MambaConfig, initializer_cfg=None, device=None, dtype=None) -> None:
         self.config = config
-        d_model = config.d_model
-        n_layer = config.n_layer
-        d_intermediate = config.d_intermediate
-        vocab_size = config.vocab_size
-        ssm_cfg = config.ssm_cfg
-        attn_layer_idx = config.attn_layer_idx
-        attn_cfg = config.attn_cfg
-        rms_norm = config.rms_norm
-        residual_in_fp32 = config.residual_in_fp32
-        fused_add_norm = config.fused_add_norm
-        pad_vocab_size_multiple = config.pad_vocab_size_multiple
         factory_kwargs = {"device": device, "dtype": dtype}
-
         super().__init__()
-        if vocab_size % pad_vocab_size_multiple != 0:
-            vocab_size += pad_vocab_size_multiple - (
-                vocab_size % pad_vocab_size_multiple
-            )
+        vocab_size = config.vocab_size
+        if vocab_size % config.pad_vocab_size_multiple != 0:
+            vocab_size += config.pad_vocab_size_multiple - (vocab_size % config.pad_vocab_size_multiple)
         self.backbone = MixerModel(
-            d_model=d_model,
-            n_layer=n_layer,
-            d_intermediate=d_intermediate,
+            d_model=config.d_model,
+            n_layer=config.n_layer,
+            d_intermediate=config.d_intermediate,
             vocab_size=vocab_size,
-            ssm_cfg=ssm_cfg,
-            attn_layer_idx=attn_layer_idx,
-            attn_cfg=attn_cfg,
-            rms_norm=rms_norm,
+            ssm_cfg=config.ssm_cfg,
+            attn_layer_idx=config.attn_layer_idx,
+            attn_cfg=config.attn_cfg,
             initializer_cfg=initializer_cfg,
-            fused_add_norm=fused_add_norm,
-            residual_in_fp32=residual_in_fp32,
+            residual_in_fp32=config.residual_in_fp32,
             **factory_kwargs,
         )
-        self.lm_head = nn.Linear(d_model, vocab_size, bias=False, **factory_kwargs)
-
-        # Initialize weights and apply final processing
-        self.apply(
-            partial(
-                _init_weights,
-                n_layer=n_layer,
-                **(initializer_cfg if initializer_cfg is not None else {}),
-            )
-        )
+        self.lm_head = nn.Linear(config.d_model, vocab_size, bias=False, **factory_kwargs)
+        self.apply(partial(_init_weights, n_layer=config.n_layer, **(initializer_cfg if initializer_cfg is not None else {})))
         self.tie_weights()
 
     def tie_weights(self):

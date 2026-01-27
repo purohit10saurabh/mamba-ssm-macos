@@ -5,7 +5,7 @@ from torch import Tensor, nn
 
 
 class Block(nn.Module):
-    def __init__(self, dim, mixer_cls, mlp_cls, norm_cls=nn.LayerNorm, fused_add_norm=False, residual_in_fp32=False):
+    def __init__(self, dim, mixer_cls, mlp_cls, norm_cls=nn.LayerNorm, residual_in_fp32=False):
         super().__init__()
         self.residual_in_fp32 = residual_in_fp32
         self.norm = norm_cls(dim)

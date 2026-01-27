@@ -1,10 +1,8 @@
-import gc
 import time
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
 import torch
-import torch.nn.functional as F
 from torch import Tensor
 from transformers.generation import GreedySearchDecoderOnlyOutput, SampleDecoderOnlyOutput, TextStreamer
 
@@ -30,23 +28,11 @@ class InferenceParams:
 
 
 def modify_logits_for_min_p_filtering(logits, min_p):
-    """Set the logits for none min_p values to -inf. Done in-place."""
     if min_p <= 0.0 or min_p >= 1.0:
         return
-    indices_to_remove = logits < min_p
-    logits.masked_fill_(indices_to_remove, float("-Inf"))
+    logits.masked_fill_(logits < min_p, float("-Inf"))
 
 
-# https://github.com/NVIDIA/Megatron-LM/blob/0bb597b42c53355a567aba2a1357cc34b9d99ddd/megatron/text_generation/sampling.py
-# https://github.com/huggingface/transformers/blob/a44985b41cfa2de48a5e1de7f1f93b7483da25d1/src/transformers/generation/logits_process.py#L231
-def modify_logits_for_top_k_filtering(logits, top_k):
-    """Set the logits for none top-k values to -inf. Done in-place."""
-    indices_to_remove = logits < torch.topk(logits, top_k)[0][..., -1, None]
-    logits.masked_fill_(indices_to_remove, float("-Inf"))
-
-
-# https://github.com/NVIDIA/Megatron-LM/blob/0bb597b42c53355a567aba2a1357cc34b9d99ddd/megatron/text_generation/sampling.py
-# https://github.com/huggingface/transformers/blob/a44985b41cfa2de48a5e1de7f1f93b7483da25d1/src/transformers/generation/logits_process.py#L170
 def modify_logits_for_top_p_filtering(logits, top_p):
     """Set the logits for none top-p values to -inf. Done in-place."""
     if top_p <= 0.0 or top_p >= 1.0:

@@ -323,20 +323,19 @@ python -m examples.02_text_generation --interactive
 
 ## Citation
 
-If you use this implementation in your research or project, please cite it. GitHub will automatically recognize the citation from the [CITATION.cff](CITATION.cff) file.
+If you use this implementation, please cite this repo and the original Mamba papers.
 
-**BibTeX format:**
+**This repo:**
 ```bibtex
 @software{purohit2026mamba_macos,
-  title={Mamba for macOS Apple Silicon: Optimized Implementation},
-  author={Purohit, Saurabh and Dao, Tri and Gu, Albert},
+  title={Mamba SSM for macOS Apple Silicon},
+  author={Purohit, Saurabh},
   year={2026},
   url={https://github.com/purohit10saurabh/mamba-ssm-macos}
 }
 ```
 
-**APA format:**
-> Purohit, S., Dao, T., & Gu, A. (2026). Mamba for macOS Apple Silicon: Optimized implementation [Computer software]. https://github.com/purohit10saurabh/mamba-ssm-macos
+**Original Mamba papers** (see [References](#references) below for full citations)
 
 ## References
 
