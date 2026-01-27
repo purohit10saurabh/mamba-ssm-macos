@@ -34,7 +34,14 @@ def create_mamba1_config(config_data):
 
 
 def create_mamba2_config(config_data):
-    config_data["ssm_cfg"] = {"layer": "Mamba2", "d_state": 128, "d_conv": 4, "expand": 2, "headdim": 64, "ngroups": 1}
+    config_data["ssm_cfg"] = {
+        "layer": "Mamba2",
+        "d_state": 128,
+        "d_conv": 4,
+        "expand": 2,
+        "headdim": 64,
+        "ngroups": 1,
+    }
     return MambaConfig(**config_data)
 
 
@@ -75,7 +82,9 @@ def generate_text_with_model(model, tokenizer, prompt, device, max_length, tempe
         for _ in range(max_length - input_ids.shape[1]):
             logits = model(generated).logits[:, -1, :]
             if temperature > 0:
-                next_token = torch.multinomial(torch.softmax(logits / temperature, dim=-1), num_samples=1)
+                next_token = torch.multinomial(
+                    torch.softmax(logits / temperature, dim=-1), num_samples=1
+                )
             else:
                 next_token = torch.argmax(logits, dim=-1, keepdim=True)
             generated = torch.cat([generated, next_token], dim=1)
