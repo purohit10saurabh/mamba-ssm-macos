@@ -8,7 +8,7 @@ managed = true
 [project]
 name = "mamba-ssm-macos"
 version = "0.1.0"
-description = "Mamba2MacOS - State Space Models optimized for Apple Silicon"
+description = "Mamba SSM - State Space Models optimized for Apple Silicon"
 readme = "README.md"
 authors = [
   { name = "Saurabh Purohit", email = "saurabh97purohit@gmail.com" },

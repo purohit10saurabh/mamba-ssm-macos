@@ -1,21 +1,12 @@
-# Copyright (c) 2023, Albert Gu, Tri Dao.
 import gc
 import time
-from collections import namedtuple
 from dataclasses import dataclass, field
-from functools import partial
-from typing import Callable, Optional, Sequence, Union
+from typing import Callable, Optional
 
 import torch
 import torch.nn.functional as F
-from einops import rearrange, repeat
 from torch import Tensor
-from torch.profiler import ProfilerActivity, profile, record_function
-from transformers.generation import (
-    GreedySearchDecoderOnlyOutput,
-    SampleDecoderOnlyOutput,
-    TextStreamer,
-)
+from transformers.generation import GreedySearchDecoderOnlyOutput, SampleDecoderOnlyOutput, TextStreamer
 
 
 @dataclass
@@ -232,11 +223,7 @@ def decode(
             return True
         return False
 
-    start = torch.cuda.Event(enable_timing=enable_timing)
-    end = torch.cuda.Event(enable_timing=enable_timing)
-
-    if enable_timing:
-        start.record()
+    start_time = time.time() if enable_timing else None
     scores, sequences = [], [input_ids]
     sequences_cat = input_ids
     while not should_stop(sequences[-1], inference_params):
@@ -257,10 +244,9 @@ def decode(
             streamer.put(sampled_tokens.cpu())
     if streamer is not None:
         streamer.end()
-    if enable_timing:
-        end.record()
-        torch.cuda.synchronize()
-        print(f"Prompt processing + decoding time: {(start.elapsed_time(end)):.0f}ms")
+    if enable_timing and start_time is not None:
+        elapsed_ms = (time.time() - start_time) * 1000
+        print(f"Prompt processing + decoding time: {elapsed_ms:.0f}ms")
     output_cls = (
         GreedySearchDecoderOnlyOutput if top_k == 1 else SampleDecoderOnlyOutput
     )
@@ -312,126 +298,9 @@ class DecodingCGCache:
 
 
 @torch.inference_mode()
-def update_graph_cache(
-    model,
-    cache,
-    batch_size,
-    seqlen_og,
-    max_seqlen,
-    decoding_seqlens=(1,),
-    dtype=None,
-    n_warmups=2,
-):
-    if cache is None:
-        cache = DecodingCGCache()
-    param_example = next(iter(model.parameters()))
-    device = param_example.device
-    if dtype is None:
-        dtype = param_example.dtype
-    if (
-        (device, dtype) != (cache.device, cache.dtype)
-        or batch_size > cache.max_batch_size
-        or max_seqlen > cache.max_seqlen
-    ):  # Invalidate the cache
-        cache.callables = {}
-        cache.mempool = None
-        cache.inference_params = None
-        gc.collect()
-        cache.device, cache.dtype = device, dtype
-        cache.max_batch_size, cache.max_seqlen = batch_size, max_seqlen
-        assert hasattr(
-            model, "allocate_inference_cache"
-        ), "CUDA graph decoding requires that the model has a method allocate_inference_cache"
-        inf_cache = model.allocate_inference_cache(batch_size, max_seqlen, dtype)
-        lengths_per_sample = torch.full(
-            (batch_size,), seqlen_og, dtype=torch.int32, device=device
-        )
-        cache.inference_params = InferenceParams(
-            max_seqlen=max_seqlen,
-            max_batch_size=batch_size,
-            seqlen_offset=seqlen_og,
-            key_value_memory_dict=inf_cache,
-            lengths_per_sample=lengths_per_sample,
-        )
-        cache.mempool = torch.cuda.graphs.graph_pool_handle()
-    for decoding_seqlen in decoding_seqlens:
-        if (batch_size, decoding_seqlen) not in cache.callables:
-            cache.callables[batch_size, decoding_seqlen] = capture_graph(
-                model,
-                cache.inference_params,
-                batch_size,
-                max_seqlen,
-                decoding_seqlen=decoding_seqlen,
-                mempool=cache.mempool,
-                n_warmups=n_warmups,
-            )
-
-    def dispatch(input_ids, position_ids, seqlen):
-        batch_size, decoding_seqlen = input_ids.shape[:2]
-        return cache.callables[batch_size, decoding_seqlen](
-            input_ids, position_ids, seqlen
-        )
-
-    cache.run = dispatch
-    cache.inference_params.seqlen_offset = 0  # Reset so it's not confusing
-    return cache
+def update_graph_cache(model, cache, batch_size, seqlen_og, max_seqlen, decoding_seqlens=(1,), dtype=None, n_warmups=2):
+    raise NotImplementedError("CUDA graph caching is not supported on macOS. Set cg=False in decode().")
 
 
-def capture_graph(
-    model,
-    inference_params,
-    batch_size,
-    max_seqlen,
-    decoding_seqlen=1,
-    mempool=None,
-    n_warmups=2,
-):
-    device = next(iter(model.parameters())).device
-    input_ids = torch.full(
-        (batch_size, decoding_seqlen), 0, dtype=torch.long, device=device
-    )
-    position_ids = torch.full(
-        (batch_size, decoding_seqlen), 0, dtype=torch.long, device=device
-    )
-    seqlen_offset_og = inference_params.seqlen_offset
-    inference_params.seqlen_offset = max_seqlen - decoding_seqlen
-    inference_params.lengths_per_sample[:] = inference_params.seqlen_offset
-
-    # Warmup before capture
-    s = torch.cuda.Stream()
-    s.wait_stream(torch.cuda.current_stream())
-    with torch.cuda.stream(s):
-        for _ in range(n_warmups):
-            logits = model(
-                input_ids,
-                position_ids=position_ids,
-                inference_params=inference_params,
-                num_last_tokens=decoding_seqlen,
-            ).logits
-        s.synchronize()
-        # This might be needed for correctness if we run with NCCL_GRAPH_MIXING_SUPPORT=0,
-        # which requires that graph launch and non-captured launch to not overlap (I think,
-        # that's how I interpret the documentation). I'm not sure if this is required.
-        if torch.distributed.is_initialized():
-            torch.distributed.barrier()
-    torch.cuda.current_stream().wait_stream(s)
-    # Captures the graph
-    # To allow capture, automatically sets a side stream as the current stream in the context
-    graph = torch.cuda.CUDAGraph()
-    with torch.cuda.graph(graph, pool=mempool):
-        logits = model(
-            input_ids,
-            position_ids=position_ids,
-            inference_params=inference_params,
-            num_last_tokens=decoding_seqlen,
-        ).logits
-
-    def run(new_input_ids, new_position_ids, seqlen):
-        inference_params.lengths_per_sample[:] = seqlen
-        input_ids.copy_(new_input_ids)
-        position_ids.copy_(new_position_ids)
-        graph.replay()
-        return logits.clone()
-
-    inference_params.seqlen_offset = seqlen_offset_og
-    return run
+def capture_graph(model, inference_params, batch_size, max_seqlen, decoding_seqlen=1, mempool=None, n_warmups=2):
+    raise NotImplementedError("CUDA graph capture is not supported on macOS. Set cg=False in decode().")

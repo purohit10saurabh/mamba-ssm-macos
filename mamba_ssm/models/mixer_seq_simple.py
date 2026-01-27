@@ -19,10 +19,7 @@ from mamba_ssm.modules.mlp import GatedMLP
 from mamba_ssm.utils.generation import GenerationMixin
 from mamba_ssm.utils.hf import load_config_hf, load_state_dict_hf
 
-try:
-    from mamba_ssm.ops.triton.layer_norm import RMSNorm, layer_norm_fn, rms_norm_fn
-except ImportError:
-    RMSNorm, layer_norm_fn, rms_norm_fn = None, None, None
+RMSNorm = None
 
 
 def create_block(
@@ -56,27 +53,7 @@ def create_block(
             )
 
         if ssm_layer == "Mamba2":
-            # Use official Mamba2 implementation for compatibility
-            try:
-                from mamba_ssm.modules.mamba2_official import Mamba2Official
-
-                mixer_cls = partial(
-                    Mamba2Official, layer_idx=layer_idx, **ssm_cfg, **factory_kwargs
-                )
-            except ImportError as e:
-                # Fallback to original implementations
-                try:
-                    mixer_cls = partial(
-                        Mamba2, layer_idx=layer_idx, **ssm_cfg, **factory_kwargs
-                    )
-                except ImportError:
-                    # Final fallback to macOS-compatible Mamba2
-                    from mamba_ssm.modules.mamba2_macos import Mamba2MacOS
-
-                    print(f"🍎 Falling back to Mamba2MacOS for layer {layer_idx}")
-                    mixer_cls = partial(
-                        Mamba2MacOS, layer_idx=layer_idx, **ssm_cfg, **factory_kwargs
-                    )
+            mixer_cls = partial(Mamba2, layer_idx=layer_idx, **ssm_cfg, **factory_kwargs)
         else:
             mixer_cls = partial(Mamba, layer_idx=layer_idx, **ssm_cfg, **factory_kwargs)
     else:

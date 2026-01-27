@@ -217,9 +217,9 @@ Check out `examples/03_training.py` for a full training example. Here's a snippe
 ```python
 import torch
 from torch import nn
-from mamba_ssm.modules.mamba2_macos import Mamba2MacOS
+from mamba_ssm.modules.mamba2 import Mamba2
 
-model = nn.Sequential(nn.Embedding(1000, 128), *[Mamba2MacOS(d_model=128, d_state=64, d_conv=4, expand=2, headdim=64, ngroups=1, chunk_size=256, device='mps') for _ in range(2)], nn.LayerNorm(128), nn.Linear(128, 1000, bias=False)).to('mps')
+model = nn.Sequential(nn.Embedding(1000, 128), *[Mamba2(d_model=128, d_state=64, d_conv=4, expand=2, headdim=64, ngroups=1, chunk_size=256, device='mps') for _ in range(2)], nn.LayerNorm(128), nn.Linear(128, 1000, bias=False)).to('mps')
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
 criterion = nn.CrossEntropyLoss()
 

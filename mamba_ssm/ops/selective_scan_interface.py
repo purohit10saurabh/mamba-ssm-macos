@@ -1,5 +1,3 @@
-# Copyright (c) 2023, Tri Dao, Albert Gu.
-
 import torch
 import torch.nn.functional as F
 from einops import rearrange, repeat
@@ -14,32 +12,18 @@ except ImportError:
     causal_conv1d_cuda = None
 
 try:
-    from mamba_ssm.ops.triton.layer_norm import _layer_norm_fwd
-
-    has_triton = True
-except ImportError:
-    has_triton = False
-
-    # Define a fallback for _layer_norm_fwd
-    def _layer_norm_fwd(
-        x, weight, bias, eps, residual=None, residual_dtype=None, is_rms_norm=False
-    ):
-        # Fallback implementation using native PyTorch
-        if is_rms_norm:
-            rstd = 1 / torch.sqrt((x.square()).mean(dim=-1, keepdim=True) + eps)
-            out = (x * rstd * weight) + (bias if bias is not None else 0)
-            return (out, None)
-        else:
-            out = F.layer_norm(x, x.shape[-1:], weight=weight, bias=bias, eps=eps)
-            return (out, None)
-
-
-try:
     import selective_scan_cuda
-
     has_cuda_support = True
 except ImportError:
     has_cuda_support = False
+
+
+def _layer_norm_fwd(x, weight, bias, eps, residual=None, residual_dtype=None, is_rms_norm=False):
+    if is_rms_norm:
+        rstd = 1 / torch.sqrt((x.square()).mean(dim=-1, keepdim=True) + eps)
+        out = (x * rstd * weight) + (bias if bias is not None else 0)
+        return (out, None)
+    return (F.layer_norm(x, x.shape[-1:], weight=weight, bias=bias, eps=eps), None)
 
 
 class SelectiveScanFn(torch.autograd.Function):
