@@ -20,7 +20,7 @@ from omegaconf import DictConfig, OmegaConf
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-from mamba_ssm.modules.mamba2_macos import Mamba2MacOS
+from mamba_ssm.modules.mamba2 import Mamba2
 from mamba_ssm.modules.mamba_simple import Mamba
 
 DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"
@@ -100,7 +100,7 @@ class SimpleMamba2LM(nn.Module):
         self.embedding = nn.Embedding(vocab_size, d_model)
         self.layers = nn.ModuleList(
             [
-                Mamba2MacOS(
+                Mamba2(
                     d_model=d_model,
                     d_state=d_state,
                     d_conv=LAYER_CONFIG["d_conv"],

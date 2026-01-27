@@ -107,9 +107,10 @@ def load_model_weights(model, weight_paths):
     return -1
 
 
-def generate_text_with_model(model, tokenizer, prompt, device, max_length, temperature):
+def generate_text_with_model(model, tokenizer, prompt, device, max_length, temperature, seed=None):
+    if seed is not None:
+        torch.manual_seed(seed)
     input_ids = tokenizer.encode(prompt, return_tensors="pt").to(device)
-
     with torch.no_grad():
         generated = input_ids.clone()
         for _ in range(max_length - input_ids.shape[1]):
@@ -117,11 +118,8 @@ def generate_text_with_model(model, tokenizer, prompt, device, max_length, tempe
             logits = outputs.logits[:, -1, :]
             if temperature > 0:
                 logits = logits / temperature
-                next_token = torch.multinomial(
-                    torch.softmax(logits, dim=-1), num_samples=1
-                )
+                next_token = torch.multinomial(torch.softmax(logits, dim=-1), num_samples=1)
             else:
                 next_token = torch.argmax(logits, dim=-1, keepdim=True)
             generated = torch.cat([generated, next_token], dim=1)
-
     return tokenizer.decode(generated[0], skip_special_tokens=True)

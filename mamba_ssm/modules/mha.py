@@ -1,5 +1,3 @@
-# Copyright (c) 2024, Tri Dao, Albert Gu.
-
 import math
 
 import torch
