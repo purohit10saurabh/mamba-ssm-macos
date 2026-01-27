@@ -75,9 +75,7 @@ def interactive_mode():
     # Pre-load both models
     for model_name in ["mamba1", "mamba2"]:
         print(f"\n🔄 Loading {model_name}...")
-        success, model, tokenizer = load_and_prepare_model(
-            model_name, "./models", device
-        )
+        success, model, tokenizer = load_and_prepare_model(model_name, "./models", device)
 
         if success:
             models[model_name] = (model, tokenizer)
@@ -155,9 +153,7 @@ def main():
         default="both",
         help="Model to test",
     )
-    parser.add_argument(
-        "--show-structure", action="store_true", help="Show directory structure"
-    )
+    parser.add_argument("--show-structure", action="store_true", help="Show directory structure")
 
     args = parser.parse_args()
 

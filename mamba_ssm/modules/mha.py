@@ -82,20 +82,14 @@ class MHA(nn.Module):
             self.num_heads % self.num_heads_kv == 0
         ), "num_heads must be divisible by num_heads_kv"
         if head_dim is None:
-            assert (
-                self.embed_dim % num_heads == 0
-            ), "embed_dim must be divisible by num_heads"
-        self.head_dim = (
-            head_dim if head_dim is not None else self.embed_dim // num_heads
-        )
+            assert self.embed_dim % num_heads == 0, "embed_dim must be divisible by num_heads"
+        self.head_dim = head_dim if head_dim is not None else self.embed_dim // num_heads
         self.mlp_dim = math.ceil(mlp_dim / 256) * 256
         qkv_dim = self.head_dim * (self.num_heads + 2 * self.num_heads_kv)
         out_dim = self.head_dim * self.num_heads
 
         if self.rotary_emb_dim > 0:
-            assert (
-                RotaryEmbedding is not None
-            ), "rotary requires flash_attn to be installed"
+            assert RotaryEmbedding is not None, "rotary requires flash_attn to be installed"
             self.rotary_emb = RotaryEmbedding(
                 self.rotary_emb_dim,
                 base=rotary_emb_base,
@@ -145,9 +139,7 @@ class MHA(nn.Module):
 
     def _update_kv_cache(self, kv, inference_params):
         """kv: (batch_size, seqlen, 2, nheads, head_dim) or (batch_size, 1, 2, nheads, head_dim)"""
-        assert (
-            self.layer_idx is not None
-        ), "Generation requires layer_idx in the constructor"
+        assert self.layer_idx is not None, "Generation requires layer_idx in the constructor"
         return _update_kv_cache(kv, inference_params, self.layer_idx)
 
     def _apply_rotary_update_kvcache_attention(self, q, kv, inference_params):
@@ -187,9 +179,7 @@ class MHA(nn.Module):
             cache_seqlens=cache_seqlens,
             softmax_scale=self.softmax_scale,
             causal=self.causal,
-            rotary_interleaved=(
-                self.rotary_emb.interleaved if self.rotary_emb_dim > 0 else False
-            ),
+            rotary_interleaved=(self.rotary_emb.interleaved if self.rotary_emb_dim > 0 else False),
         )
         return context
 
@@ -199,12 +189,8 @@ class MHA(nn.Module):
             # TODO: this only uses seqlen_offset and not lengths_per_sample.
             kv = self._update_kv_cache(kv, inference_params)
             k, v = kv.unbind(dim=-3)
-            k = torch.repeat_interleave(
-                k, dim=2, repeats=self.num_heads // self.num_heads_kv
-            )
-            v = torch.repeat_interleave(
-                v, dim=2, repeats=self.num_heads // self.num_heads_kv
-            )
+            k = torch.repeat_interleave(k, dim=2, repeats=self.num_heads // self.num_heads_kv)
+            v = torch.repeat_interleave(v, dim=2, repeats=self.num_heads // self.num_heads_kv)
             return F.scaled_dot_product_attention(
                 q.transpose(1, 2),
                 k.transpose(1, 2),
@@ -245,10 +231,8 @@ class MHA(nn.Module):
             inference_params is not None
             and self.layer_idx not in inference_params.key_value_memory_dict
         ):
-            inference_params.key_value_memory_dict[self.layer_idx] = (
-                self.allocate_inference_cache(
-                    x.shape[0], inference_params.max_seqlen, dtype=x.dtype
-                )
+            inference_params.key_value_memory_dict[self.layer_idx] = self.allocate_inference_cache(
+                x.shape[0], inference_params.max_seqlen, dtype=x.dtype
             )
         seqlen_offset = (
             0
@@ -259,9 +243,7 @@ class MHA(nn.Module):
                 else inference_params.seqlen_offset
             )
         )
-        rotary_max_seqlen = (
-            inference_params.max_seqlen if inference_params is not None else None
-        )
+        rotary_max_seqlen = inference_params.max_seqlen if inference_params is not None else None
         qkv = self.in_proj(x)
         if self.mlp_dim > 0:
             qkv, x_mlp = qkv.split([qkv.shape[-1] - self.mlp_dim, self.mlp_dim], dim=-1)
@@ -272,9 +254,7 @@ class MHA(nn.Module):
             if inference_params is None or inference_params.seqlen_offset == 0:
                 if causal_conv1d_fn is None:
                     qkv = rearrange(
-                        self.conv1d(rearrange(qkv, "b s d -> b d s"))[
-                            ..., : -(self.d_conv - 1)
-                        ],
+                        self.conv1d(rearrange(qkv, "b s d -> b d s"))[..., : -(self.d_conv - 1)],
                         "b d s -> b s d",
                     ).contiguous()
                 else:
@@ -284,9 +264,7 @@ class MHA(nn.Module):
                         self.conv1d.bias,
                     ).transpose(1, 2)
                 if inference_params is not None:
-                    _, conv_state = inference_params.key_value_memory_dict[
-                        self.layer_idx
-                    ]
+                    _, conv_state = inference_params.key_value_memory_dict[self.layer_idx]
                     # If we just take qkv[:, :, -self.d_conv :], it will error if seqlen < self.d_conv
                     # Instead F.pad will pad with zeros if seqlen < self.d_conv, and truncate otherwise.
                     qkv_t = rearrange(qkv, "b l d -> b d l")
@@ -295,9 +273,7 @@ class MHA(nn.Module):
                     )  # Update state (B D W)
             else:
                 _, conv_state = inference_params.key_value_memory_dict[self.layer_idx]
-                assert (
-                    qkv.shape[1] == 1
-                ), "Only support decoding with 1 token at a time for now"
+                assert qkv.shape[1] == 1, "Only support decoding with 1 token at a time for now"
                 qkv = qkv.squeeze(1)
                 # Conv step
                 if causal_conv1d_update is None:
@@ -336,12 +312,8 @@ class MHA(nn.Module):
                 )
             if inference_params is None:
                 k, v = kv.unbind(dim=-3)
-                k = torch.repeat_interleave(
-                    k, dim=2, repeats=self.num_heads // self.num_heads_kv
-                )
-                v = torch.repeat_interleave(
-                    v, dim=2, repeats=self.num_heads // self.num_heads_kv
-                )
+                k = torch.repeat_interleave(k, dim=2, repeats=self.num_heads // self.num_heads_kv)
+                v = torch.repeat_interleave(v, dim=2, repeats=self.num_heads // self.num_heads_kv)
                 context = F.scaled_dot_product_attention(
                     q.transpose(1, 2),
                     k.transpose(1, 2),
@@ -352,9 +324,7 @@ class MHA(nn.Module):
             else:
                 context = self._update_kvcache_attention(q, kv, inference_params)
         else:
-            context = self._apply_rotary_update_kvcache_attention(
-                q, kv, inference_params
-            )
+            context = self._apply_rotary_update_kvcache_attention(q, kv, inference_params)
         context = rearrange(context, "... h d -> ... (h d)")
         if self.mlp_dim > 0:
             context = torch.cat([context, x_mlp], dim=-1)

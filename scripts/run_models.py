@@ -15,9 +15,7 @@ def run_model(model_name, args):
     print(f"🍎 Loading downloaded {model_name.title()} model on {args.device}...")
 
     try:
-        success, model, tokenizer = load_and_prepare_model(
-            model_name, args.model_dir, args.device
-        )
+        success, model, tokenizer = load_and_prepare_model(model_name, args.model_dir, args.device)
         if not success:
             return False
 
@@ -34,16 +32,10 @@ def main():
     parser = argparse.ArgumentParser(description="Run Mamba models")
     parser.add_argument("model", choices=["mamba1", "mamba2"], help="Model to run")
     parser.add_argument("--prompt", default="The future of AI is", help="Text prompt")
-    parser.add_argument(
-        "--max-length", type=int, default=50, help="Maximum generation length"
-    )
-    parser.add_argument(
-        "--temperature", type=float, default=0.8, help="Sampling temperature"
-    )
+    parser.add_argument("--max-length", type=int, default=50, help="Maximum generation length")
+    parser.add_argument("--temperature", type=float, default=0.8, help="Sampling temperature")
     parser.add_argument("--device", default=get_device(), help="Device")
-    parser.add_argument(
-        "--model-dir", default="./models", help="Downloaded models directory"
-    )
+    parser.add_argument("--model-dir", default="./models", help="Downloaded models directory")
 
     args = parser.parse_args()
     if args.model == "mamba2" and args.max_length == 50:

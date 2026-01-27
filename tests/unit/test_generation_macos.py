@@ -26,10 +26,7 @@ class SimpleMambaLMHeadModel(nn.Module):
 
         # Create a stack of Mamba layers (no Mamba2 which requires Triton)
         self.layers = nn.ModuleList(
-            [
-                Mamba(d_model=d_model, d_state=d_state, d_conv=4, expand=2)
-                for _ in range(n_layer)
-            ]
+            [Mamba(d_model=d_model, d_state=d_state, d_conv=4, expand=2) for _ in range(n_layer)]
         )
 
         self.norm = nn.LayerNorm(d_model)
@@ -85,9 +82,7 @@ class SimpleMambaLMHeadModel(nn.Module):
                 next_token = next_token_logits.argmax(dim=-1)
 
             scores.append(next_token_logits)
-            generated_tokens = torch.cat(
-                [generated_tokens, next_token.unsqueeze(-1)], dim=-1
-            )
+            generated_tokens = torch.cat([generated_tokens, next_token.unsqueeze(-1)], dim=-1)
 
         if return_dict_in_generate:
             return type("", (), {"sequences": generated_tokens, "scores": scores})()
@@ -125,9 +120,7 @@ class TestGenerationMacOS(unittest.TestCase):
         max_diff = (out_scores - out_ref[:, prompt_len - 1 : -1]).abs().max().item()
         print(f"Max diff: {max_diff}")
         self.assertTrue(
-            torch.allclose(
-                out_scores, out_ref[:, prompt_len - 1 : -1], rtol=1e-3, atol=1e-2
-            )
+            torch.allclose(out_scores, out_ref[:, prompt_len - 1 : -1], rtol=1e-3, atol=1e-2)
         )
 
     def test_generation_varlen(self):
@@ -150,13 +143,9 @@ class TestGenerationMacOS(unittest.TestCase):
         )
 
         # Create input sequences of different lengths
-        input_ids = torch.zeros(
-            (batch_size, max_seqlen), device=device, dtype=torch.long
-        )
+        input_ids = torch.zeros((batch_size, max_seqlen), device=device, dtype=torch.long)
         for i, seqlen in enumerate(seqlens):
-            input_ids[i, :seqlen] = torch.randint(
-                0, vocab_size, (seqlen,), device=device
-            )
+            input_ids[i, :seqlen] = torch.randint(0, vocab_size, (seqlen,), device=device)
 
         # Create attention mask to handle variable lengths
         attention_mask = torch.zeros_like(input_ids)

@@ -37,9 +37,7 @@ def set_global_seed(seed: int) -> None:
 
 
 class LearnableSequenceDataset(Dataset):
-    def __init__(
-        self, *, size: int, seq_len: int, vocab_size: int, task: str, base_seed: int
-    ):
+    def __init__(self, *, size: int, seq_len: int, vocab_size: int, task: str, base_seed: int):
         self._size, self._seq_len, self._vocab_size = size, seq_len, vocab_size
         self._task, self._base_seed = task, base_seed
 
@@ -93,9 +91,7 @@ class SimpleMambaLM(nn.Module):
 
 
 class SimpleMamba2LM(nn.Module):
-    def __init__(
-        self, vocab_size: int, d_model: int, d_state: int, n_layers: int, headdim: int
-    ):
+    def __init__(self, vocab_size: int, d_model: int, d_state: int, n_layers: int, headdim: int):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, d_model)
         self.layers = nn.ModuleList(
@@ -141,9 +137,7 @@ def train_step(
     return loss.item()
 
 
-def evaluate(
-    model: nn.Module, dataloader: Iterable, criterion: nn.Module
-) -> Tuple[float, float]:
+def evaluate(model: nn.Module, dataloader: Iterable, criterion: nn.Module) -> Tuple[float, float]:
     model.eval()
     total_loss = 0.0
     total_correct = 0.0
