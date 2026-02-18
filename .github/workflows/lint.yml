@@ -2,9 +2,13 @@ name: Lint
 
 on:
   push:
-    branches: [main, master, dev]
+    branches: [main]
   pull_request:
-    branches: [main, master, dev]
+    branches: [main, dev]
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
