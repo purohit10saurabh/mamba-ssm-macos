@@ -5,16 +5,28 @@
 [![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-M1%20%7C%20M2%20%7C%20M3%20%7C%20M4-blue?logo=apple)](https://developer.apple.com/mac/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-green?logo=python)](https://python.org)
 [![PyTorch](https://img.shields.io/badge/PyTorch-MPS%20Accelerated-orange?logo=pytorch)](https://pytorch.org)
+[![PyPI](https://img.shields.io/pypi/v/mamba-ssm-macos)](https://pypi.org/project/mamba-ssm-macos/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 Training and inference of Mamba 1 & 2 on Apple Silicon with MPS acceleration. Works without CUDA/Triton. Supports CLI, Python API, and interactive demos.
 
-## Quick Start
+## Installation
+
+```bash
+pip install mamba-ssm-macos
+```
+
+Or install from source:
 
 ```bash
 git clone https://github.com/purohit10saurabh/mamba-ssm-macos.git
 cd mamba-ssm-macos
 uv sync                                     # or: pip install -r requirements.txt
+```
+
+## Quick Start
+
+```bash
 
 python -m scripts.download_models mamba1    # Mamba 1 (493MB)
 python -m scripts.download_models mamba2    # Mamba 2 (493MB)
