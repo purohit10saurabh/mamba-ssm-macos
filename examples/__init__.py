@@ -1,3 +1,3 @@
 # Mamba SSM Examples Package
 
-__version__ = "1.0.0"
+from mamba_ssm import __version__

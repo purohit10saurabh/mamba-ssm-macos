@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
+requires = ["setuptools>=61", "wheel", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [tool.uv]
@@ -7,7 +7,7 @@ managed = true
 
 [project]
 name = "mamba-ssm-macos"
-dynamic = ["version"]
+version = "0.0.0"
 description = "Mamba SSM - State Space Models optimized for Apple Silicon"
 readme = "README.md"
 authors = [
@@ -59,8 +59,8 @@ dev = [
     "build>=1.4.0",
 ]
 
-[tool.setuptools.dynamic]
-version = {attr = "mamba_ssm.__version__"}
+[tool.setuptools_scm]
+version_file = "mamba_ssm/_version.py"
 
 [tool.setuptools]
 packages = [
