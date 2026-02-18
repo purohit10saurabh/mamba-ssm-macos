@@ -15,19 +15,14 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: astral-sh/setup-uv@v4
 
       - name: Set version from tag
-        run: echo "SETUPTOOLS_SCM_PRETEND_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
-
-      - name: Install dependencies
-        run: uv sync
+        run: uv version "${GITHUB_REF_NAME#v}"
 
       - name: Build package
-        run: uv run python -m build
+        run: uv build
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

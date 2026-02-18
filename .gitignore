@@ -12,9 +12,6 @@ dist/
 models/*
 .pytest_cache/
 
-# auto-generated version file
-mamba_ssm/_version.py
-
 # uv package manager
 .venv/
 .uv/

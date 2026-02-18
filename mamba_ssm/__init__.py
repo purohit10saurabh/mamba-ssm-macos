@@ -1,6 +1,8 @@
+from importlib.metadata import PackageNotFoundError, version
+
 try:
-    from mamba_ssm._version import version as __version__
-except ImportError:
+    __version__ = version("mamba-ssm-macos")
+except PackageNotFoundError:
     __version__ = "0.0.0"
 
 import platform

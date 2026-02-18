@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61", "wheel", "setuptools-scm>=8"]
+requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.uv]
@@ -58,9 +58,6 @@ Repository = "https://github.com/purohit10saurabh/mamba-ssm-macos"
 dev = [
     "build>=1.4.0",
 ]
-
-[tool.setuptools_scm]
-version_file = "mamba_ssm/_version.py"
 
 [tool.setuptools]
 packages = [
