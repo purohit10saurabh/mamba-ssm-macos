@@ -4,11 +4,7 @@ from typing import Callable, Optional
 
 import torch
 from torch import Tensor
-from transformers.generation import (
-    GreedySearchDecoderOnlyOutput,
-    SampleDecoderOnlyOutput,
-    TextStreamer,
-)
+from transformers.generation import GenerateDecoderOnlyOutput, TextStreamer
 
 
 @dataclass
@@ -135,7 +131,7 @@ def decode(
         max_length: int
         teacher_outputs (optional): (batch, seq_len). If provided, instead of sampling from the
             logits, the next token is taken from the teacher_outputs. Useful for testing.
-    Returns: GreedySearchDecoderOnlyOutput or SampleDecoderOnlyOutput, with the following fields:
+    Returns: GenerateDecoderOnlyOutput with the following fields:
         sequences: (batch, max_length)
         scores: tuples of (batch, vocab_size)
     """
@@ -222,8 +218,7 @@ def decode(
     if enable_timing and start_time is not None:
         elapsed_ms = (time.time() - start_time) * 1000
         print(f"Prompt processing + decoding time: {elapsed_ms:.0f}ms")
-    output_cls = GreedySearchDecoderOnlyOutput if top_k == 1 else SampleDecoderOnlyOutput
-    return output_cls(sequences=torch.cat(sequences, dim=1), scores=tuple(scores))
+    return GenerateDecoderOnlyOutput(sequences=torch.cat(sequences, dim=1), scores=tuple(scores))
 
 
 class GenerationMixin:

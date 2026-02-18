@@ -26,7 +26,7 @@ classifiers = [
 
 dependencies = [
   "torch>=2.0.0",
-  "transformers>=4.30.0",
+  "transformers>=4.41.0",
   "numpy>=1.21.0",
   "einops>=0.7.0",
   "huggingface-hub>=0.16.0",
