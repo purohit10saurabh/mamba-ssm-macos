@@ -1,4 +1,5 @@
 # Copyright (c) 2023, Albert Gu, Tri Dao.
+# Copyright (c) 2026, Saurabh Purohit.
 
 import copy
 import json
@@ -232,9 +233,22 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
     @classmethod
     def from_pretrained(cls, pretrained_model_name, device=None, dtype=None, **kwargs):
         config_data = load_config_hf(pretrained_model_name)
+        if "mamba2" in pretrained_model_name:
+            mamba2_defaults = {
+                "layer": "Mamba2",
+                "d_state": 128,
+                "d_conv": 4,
+                "expand": 2,
+                "headdim": 64,
+                "ngroups": 1,
+            }
+            config_data["ssm_cfg"] = {**mamba2_defaults, **config_data.get("ssm_cfg", {})}
+        config_data["fused_add_norm"] = False
         config = MambaConfig(**config_data)
         model = cls(config, device=device, dtype=dtype, **kwargs)
-        model.load_state_dict(load_state_dict_hf(pretrained_model_name, device=device, dtype=dtype))
+        model.load_state_dict(
+            load_state_dict_hf(pretrained_model_name, device=device, dtype=dtype), strict=False
+        )
         return model
 
     def save_pretrained(self, save_directory):

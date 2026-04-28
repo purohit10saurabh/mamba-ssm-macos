@@ -5,12 +5,6 @@ try:
 except PackageNotFoundError:
     __version__ = "0.0.0"
 
-import platform
-import sys
-
-if sys.platform == "darwin" and platform.machine() == "arm64":
-    print("Mamba SSM macOS: Running on Apple Silicon with MPS acceleration")
-
 from mamba_ssm.models.mixer_seq_simple import MambaLMHeadModel
 from mamba_ssm.modules.mamba2 import Mamba2
 from mamba_ssm.modules.mamba_simple import Mamba

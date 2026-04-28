@@ -8,7 +8,7 @@
 [![PyPI](https://img.shields.io/pypi/v/mamba-ssm-macos)](https://pypi.org/project/mamba-ssm-macos/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-Training and inference of Mamba 1 & 2 on Apple Silicon with MPS acceleration. Works without CUDA/Triton. Supports CLI, Python API, and interactive demos.
+Training and inference of Mamba 1 & 2 on Apple Silicon with MPS acceleration. Works without CUDA/Triton.
 
 ## Installation
 
@@ -16,56 +16,26 @@ Training and inference of Mamba 1 & 2 on Apple Silicon with MPS acceleration. Wo
 pip install mamba-ssm-macos
 ```
 
-Or install from source:
+Prerequisites: macOS 12.3+ with Apple Silicon, Python 3.10+, 8GB+ RAM recommended.
 
-```bash
-git clone https://github.com/purohit10saurabh/mamba-ssm-macos.git
-cd mamba-ssm-macos
-uv sync                                     # or: pip install -r requirements.txt
+## Quickstart
+
+```python
+import torch
+from transformers import AutoTokenizer
+from mamba_ssm import MambaLMHeadModel, generate_text_with_model, get_device
+
+device = get_device()
+model_name = "state-spaces/mamba-130m"  # or "state-spaces/mamba2-130m"
+model = MambaLMHeadModel.from_pretrained(model_name, device=device)
+tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neox-20b")
+text = generate_text_with_model(model, tokenizer, "Once upon a time", device, max_length=50, temperature=0.8)
+print(text)
 ```
 
-## Quick Start
-
-```bash
-
-python -m scripts.download_models mamba1    # Mamba 1 (493MB)
-python -m scripts.download_models mamba2    # Mamba 2 (493MB)
-
-make run-mamba1                             # Quick Mamba 1 demo
-make run-mamba2                             # Quick Mamba 2 demo
-```
-
-**Prerequisites:** macOS 12.3+ with Apple Silicon, Python 3.10+, 8GB+ RAM recommended.
-
-## Usage
-
-### Text Generation
-```bash
-python -m scripts.run_models mamba1 --prompt "The future of AI" --max-length 50
-python -m scripts.run_models mamba2 --prompt "The future of AI" --max-length 30
-python -m scripts.run_models mamba1 --prompt "Once upon a time" --temperature 0.8
-python -m examples.02_text_generation --interactive
-```
-
-### Examples
-```bash
-python -m examples.01_core_modules     # Core modules usage
-python -m examples.02_text_generation  # Text generation demo
-python -m examples.03_training         # Training example
-```
-
-### Makefile Commands
-```bash
-make download-models   # Download both models
-make run-mamba1        # Quick Mamba 1 demo
-make run-mamba2        # Quick Mamba 2 demo
-make test-quick        # Fast integration test
-make test              # Full test suite
-```
+The model is downloaded from Hugging Face Hub on first run and cached under `~/.cache/huggingface/`.
 
 ## Training
-
-See `examples/03_training.py` for a full example. Snippet:
 
 ```python
 import torch
@@ -84,25 +54,37 @@ for input_ids, labels in dataloader:
     optimizer.step()
 ```
 
-## Repository Structure
+See `examples/03_training.py` for a complete training example.
 
-```
-mamba-ssm-macos/
-├── mamba_ssm/              # Core library (models, modules, ops, utils)
-├── scripts/                # download_models.py, run_models.py
-├── tests/                  # unit/, integration/, run_unit_tests.py
-├── examples/               # 01_core_modules, 02_text_generation, 03_training
-├── Makefile
-└── pyproject.toml
+## Examples
+
+Clone the repo to run examples:
+
+```bash
+git clone https://github.com/purohit10saurabh/mamba-ssm-macos.git
+cd mamba-ssm-macos
+uv sync
+python -m examples.01_core_modules  # Core modules usage
+python -m examples.02_text_generation --interactive  # Text generation
+python -m examples.03_training  # Training
 ```
 
 ## Troubleshooting
 
-**"Model files not found"** — Run `make download-models` or `python -m scripts.download_models mamba1|mamba2`.
+**"MPS not available"** — Check with `python -c "import torch; print(torch.backends.mps.is_available())"`. The library falls back to CPU automatically.
 
-**"MPS not available"** — Check with `python -c "import torch; print(torch.backends.mps.is_available())"`. Falls back to CPU automatically.
+**Slow first run** — Initial `from_pretrained` downloads ~500MB of weights from Hugging Face Hub. Subsequent runs use the local cache.
 
-**Import errors** — Use module syntax: `python -m examples.02_text_generation`.
+## Development
+
+```bash
+git clone https://github.com/purohit10saurabh/mamba-ssm-macos.git
+cd mamba-ssm-macos
+uv sync --extra dev
+make test
+```
+
+Available `make` targets: `test`, `test-unit`, `test-integration`, `test-quick`, `format`, `format-check`, `clean`. See the [Makefile](Makefile) for details.
 
 ## Citation
 
@@ -141,19 +123,12 @@ Also available via GitHub's "Cite this repository" button ([CITATION.cff](CITATI
 ## References
 
 - [state-spaces/mamba](https://github.com/state-spaces/mamba) — Original implementation
-- [state-spaces/mamba1-130m](https://huggingface.co/state-spaces/mamba1-130m) — Mamba 1 130M Pre-trained model
-- [state-spaces/mamba2-130m](https://huggingface.co/state-spaces/mamba2-130m) — Mamba 2 130M Pre-trained model
+- [state-spaces/mamba1-130m](https://huggingface.co/state-spaces/mamba-130m) — Mamba 1 130M pre-trained model
+- [state-spaces/mamba2-130m](https://huggingface.co/state-spaces/mamba2-130m) — Mamba 2 130M pre-trained model
 
 ## Contributing
 
-Contributions are welcome — bug fixes, performance improvements, docs, and new features. Open an issue or submit a PR.
-
-```bash
-git clone https://github.com/purohit10saurabh/mamba-ssm-macos.git
-cd mamba-ssm-macos
-uv sync --extra dev
-make test
-```
+Feel free to [open an issue](https://github.com/purohit10saurabh/mamba-ssm-macos/issues) or [submit a PR](https://github.com/purohit10saurabh/mamba-ssm-macos/pulls). See [Development](#development) for the local setup.
 
 ## License
 
