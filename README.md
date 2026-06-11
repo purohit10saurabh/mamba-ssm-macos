@@ -2,11 +2,15 @@
 
 **[Mamba 1](https://arxiv.org/abs/2312.00752) and [Mamba 2](https://arxiv.org/abs/2405.21060) State Space Models for Apple Silicon**
 
+[![Downloads](https://static.pepy.tech/personalized-badge/mamba-ssm-macos?period=total&units=international_system&left_color=grey&right_color=blue&left_text=Downloads)](https://pepy.tech/project/mamba-ssm-macos)
+[![Stars](https://img.shields.io/github/stars/purohit10saurabh/mamba-ssm-macos?color=yellow&style=flat&label=%E2%AD%90%20Stars)](https://github.com/purohit10saurabh/mamba-ssm-macos/stargazers)
 [![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-M1%20%7C%20M2%20%7C%20M3%20%7C%20M4-blue?logo=apple)](https://developer.apple.com/mac/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-green?logo=python)](https://python.org)
 [![PyTorch](https://img.shields.io/badge/PyTorch-MPS%20Accelerated-orange?logo=pytorch)](https://pytorch.org)
 [![PyPI](https://img.shields.io/pypi/v/mamba-ssm-macos)](https://pypi.org/project/mamba-ssm-macos/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Website](https://img.shields.io/badge/Website-purohit10saurabh.github.io-blue?logo=githubpages&logoColor=white)](https://purohit10saurabh.github.io/)
+[![X](https://img.shields.io/badge/X-%40purohit10saurab-black?logo=x)](https://x.com/purohit10saurab)
 
 Training and inference of Mamba 1 & 2 on Apple Silicon with MPS acceleration. Works without CUDA/Triton.
 
@@ -84,7 +88,17 @@ uv sync --extra dev
 make test
 ```
 
-Available `make` targets: `test`, `test-unit`, `test-integration`, `test-quick`, `format`, `format-check`, `clean`. See the [Makefile](Makefile) for details.
+See the [Makefile](Makefile) for more details.
+
+## Star History
+
+If this project helped you run Mamba on your Mac, consider giving it a ⭐ — it helps others discover it.
+
+[![Star History Chart](https://api.star-history.com/svg?repos=purohit10saurabh/mamba-ssm-macos&type=Date)](https://star-history.com/#purohit10saurabh/mamba-ssm-macos&Date)
+
+## Author
+
+Built by Saurabh Purohit — [website](https://purohit10saurabh.github.io/) · [X](https://x.com/purohit10saurab)
 
 ## Citation
 
