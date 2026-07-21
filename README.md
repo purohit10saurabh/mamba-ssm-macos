@@ -90,19 +90,9 @@ make test
 
 See the [Makefile](Makefile) for more details.
 
-## Star History
-
-If this project helped you run Mamba on your Mac, consider giving it a ⭐ — it helps others discover it.
-
-[![Star History Chart](https://api.star-history.com/svg?repos=purohit10saurabh/mamba-ssm-macos&type=Date)](https://star-history.com/#purohit10saurabh/mamba-ssm-macos&Date)
-
-## Author
-
-Built by Saurabh Purohit — [website](https://purohit10saurabh.github.io/) · [X](https://x.com/purohit10saurab)
-
 ## Citation
 
-Also available via GitHub's "Cite this repository" button ([CITATION.cff](CITATION.cff)).
+If this project helped you run Mamba on your Mac, please cite it and give it a ⭐ to help others discover it.
 
 ```bibtex
 @software{purohit2026mamba_ssm_macos,
@@ -146,4 +136,4 @@ Feel free to [open an issue](https://github.com/purohit10saurabh/mamba-ssm-macos
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+[Apache 2.0](LICENSE)
